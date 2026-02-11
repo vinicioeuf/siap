@@ -1,4 +1,4 @@
-import { NavLink as RouterNavLink } from "react-router-dom";
+import { NavLink as RouterNavLink, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   Users,
@@ -6,7 +6,6 @@ import {
   BookOpen,
   FileText,
   ClipboardList,
-  Settings,
   LogOut,
   ChevronLeft,
   ChevronRight,
@@ -14,7 +13,15 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
-import { mockUser, roleLabels } from "@/data/mockData";
+import { useAuth } from "@/hooks/useAuth";
+
+const roleLabels: Record<string, string> = {
+  admin: "Administrador",
+  secretaria: "Secretaria Acadêmica",
+  professor: "Professor",
+  aluno: "Aluno",
+  coordenador: "Coordenador",
+};
 
 const navItems = [
   { to: "/", icon: LayoutDashboard, label: "Dashboard" },
@@ -27,6 +34,22 @@ const navItems = [
 
 export function AppSidebar() {
   const [collapsed, setCollapsed] = useState(false);
+  const { profile, roles, signOut } = useAuth();
+  const navigate = useNavigate();
+
+  const displayName = profile?.full_name || profile?.email || "Usuário";
+  const initials = displayName
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+  const primaryRole = roles[0] || "aluno";
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/login");
+  };
 
   return (
     <aside
@@ -70,25 +93,34 @@ export function AppSidebar() {
         ))}
       </nav>
 
-      {/* User + Collapse */}
+      {/* User + Actions */}
       <div className="border-t border-sidebar-border p-3 space-y-2">
         <div className="flex items-center gap-3 px-2 py-2">
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-sidebar-primary text-sidebar-primary-foreground text-xs font-bold">
-            {mockUser.nome.split(' ').map(n => n[0]).join('').slice(0, 2)}
+            {initials}
           </div>
           {!collapsed && (
             <div className="animate-slide-in min-w-0">
-              <p className="text-xs font-semibold text-sidebar-foreground truncate">{mockUser.nome}</p>
-              <p className="text-[10px] text-sidebar-foreground/50">{roleLabels[mockUser.role]}</p>
+              <p className="text-xs font-semibold text-sidebar-foreground truncate">{displayName}</p>
+              <p className="text-[10px] text-sidebar-foreground/50">{roleLabels[primaryRole] || primaryRole}</p>
             </div>
           )}
         </div>
-        <button
-          onClick={() => setCollapsed(!collapsed)}
-          className="flex w-full items-center justify-center py-2 rounded-lg text-sidebar-foreground/50 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors"
-        >
-          {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-        </button>
+        <div className="flex gap-1">
+          <button
+            onClick={handleSignOut}
+            className="flex flex-1 items-center justify-center gap-2 py-2 rounded-lg text-sidebar-foreground/50 hover:bg-destructive/20 hover:text-destructive transition-colors"
+          >
+            <LogOut className="h-4 w-4" />
+            {!collapsed && <span className="text-xs">Sair</span>}
+          </button>
+          <button
+            onClick={() => setCollapsed(!collapsed)}
+            className="flex items-center justify-center py-2 px-2 rounded-lg text-sidebar-foreground/50 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-colors"
+          >
+            {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
+          </button>
+        </div>
       </div>
     </aside>
   );
