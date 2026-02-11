@@ -1,8 +1,9 @@
+import { useEffect, useState } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { PageHeader } from "@/components/PageHeader";
-import { mockTurmas } from "@/data/mockData";
 import { Button } from "@/components/ui/button";
 import { Plus, Users, Clock, Sun, Moon, Sunset } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 const turnoIcon: Record<string, typeof Sun> = {
   matutino: Sun,
@@ -11,12 +12,24 @@ const turnoIcon: Record<string, typeof Sun> = {
 };
 
 const turnoLabel: Record<string, string> = {
-  matutino: 'Matutino',
-  vespertino: 'Vespertino',
-  noturno: 'Noturno',
+  matutino: "Matutino",
+  vespertino: "Vespertino",
+  noturno: "Noturno",
+  integral: "Integral",
 };
 
 const Turmas = () => {
+  const [turmas, setTurmas] = useState<any[]>([]);
+
+  useEffect(() => {
+    supabase
+      .from("turmas")
+      .select("*, cursos(nome)")
+      .eq("ativo", true)
+      .order("nome")
+      .then(({ data }) => setTurmas(data || []));
+  }, []);
+
   return (
     <AppLayout>
       <PageHeader
@@ -30,7 +43,10 @@ const Turmas = () => {
       />
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {mockTurmas.map((turma) => {
+        {turmas.length === 0 && (
+          <p className="col-span-full text-center py-12 text-muted-foreground text-sm">Nenhuma turma cadastrada.</p>
+        )}
+        {turmas.map((turma) => {
           const TurnoIcon = turnoIcon[turma.turno] || Sun;
           return (
             <div
@@ -40,7 +56,9 @@ const Turmas = () => {
               <div className="flex items-start justify-between mb-4">
                 <div>
                   <h3 className="text-base font-bold text-foreground">{turma.nome}</h3>
-                  <p className="text-xs text-muted-foreground mt-0.5">{turma.curso} · {turma.ano}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {turma.cursos?.nome || "Sem curso"} · {turma.ano}
+                  </p>
                 </div>
                 <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-accent/10 text-accent">
                   <TurnoIcon className="h-4 w-4" />
@@ -49,15 +67,15 @@ const Turmas = () => {
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Users className="h-3.5 w-3.5" />
-                  <span>{turma.totalAlunos} alunos</span>
+                  <span>Máx. {turma.max_alunos} alunos</span>
                 </div>
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Clock className="h-3.5 w-3.5" />
-                  <span>{turnoLabel[turma.turno]}</span>
+                  <span>{turnoLabel[turma.turno] || turma.turno}</span>
                 </div>
               </div>
               <div className="mt-4 pt-3 border-t border-border/50">
-                <p className="text-xs text-muted-foreground">{turma.professor}</p>
+                <p className="text-xs text-muted-foreground">{turma.codigo || "Sem código"}</p>
               </div>
             </div>
           );
