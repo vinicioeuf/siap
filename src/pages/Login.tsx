@@ -3,16 +3,46 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { School, Eye, EyeOff } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "@/hooks/use-toast";
 
 const Login = () => {
   const navigate = useNavigate();
+  const { signIn, signUp, user } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [isSignUp, setIsSignUp] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  // Redirect if already logged in
+  if (user) {
+    navigate("/", { replace: true });
+    return null;
+  }
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    navigate("/");
+    setIsLoading(true);
+
+    if (isSignUp) {
+      const { error } = await signUp(email, password, fullName);
+      if (error) {
+        toast({ title: "Erro no cadastro", description: error.message, variant: "destructive" });
+      } else {
+        toast({ title: "Cadastro realizado!", description: "Verifique seu e-mail para confirmar a conta." });
+        setIsSignUp(false);
+      }
+    } else {
+      const { error } = await signIn(email, password);
+      if (error) {
+        toast({ title: "Erro no login", description: error.message, variant: "destructive" });
+      } else {
+        navigate("/");
+      }
+    }
+    setIsLoading(false);
   };
 
   return (
@@ -51,12 +81,26 @@ const Login = () => {
             <h1 className="text-xl font-bold text-foreground">EduGestão</h1>
           </div>
 
-          <h2 className="text-2xl font-bold text-foreground mb-1">Entrar</h2>
+          <h2 className="text-2xl font-bold text-foreground mb-1">
+            {isSignUp ? "Criar Conta" : "Entrar"}
+          </h2>
           <p className="text-sm text-muted-foreground mb-8">
-            Acesse sua conta para continuar
+            {isSignUp ? "Preencha os dados para se cadastrar" : "Acesse sua conta para continuar"}
           </p>
 
-          <form onSubmit={handleLogin} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {isSignUp && (
+              <div>
+                <label className="text-sm font-medium text-foreground mb-1.5 block">Nome Completo</label>
+                <Input
+                  type="text"
+                  placeholder="Seu nome completo"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  required
+                />
+              </div>
+            )}
             <div>
               <label className="text-sm font-medium text-foreground mb-1.5 block">E-mail</label>
               <Input
@@ -64,6 +108,7 @@ const Login = () => {
                 placeholder="seu@email.edu.br"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                required
               />
             </div>
             <div>
@@ -74,6 +119,8 @@ const Login = () => {
                   placeholder="••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  required
+                  minLength={6}
                 />
                 <button
                   type="button"
@@ -84,17 +131,29 @@ const Login = () => {
                 </button>
               </div>
             </div>
-            <div className="flex items-center justify-between">
-              <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
-                <input type="checkbox" className="rounded border-border" />
-                Lembrar-me
-              </label>
-              <a href="#" className="text-sm text-primary hover:underline">Esqueci a senha</a>
-            </div>
-            <Button type="submit" className="w-full">
-              Entrar
+            {!isSignUp && (
+              <div className="flex items-center justify-between">
+                <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
+                  <input type="checkbox" className="rounded border-border" />
+                  Lembrar-me
+                </label>
+                <a href="#" className="text-sm text-primary hover:underline">Esqueci a senha</a>
+              </div>
+            )}
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? "Aguarde..." : isSignUp ? "Cadastrar" : "Entrar"}
             </Button>
           </form>
+
+          <div className="mt-6 text-center">
+            <button
+              type="button"
+              onClick={() => setIsSignUp(!isSignUp)}
+              className="text-sm text-primary hover:underline"
+            >
+              {isSignUp ? "Já tem conta? Entrar" : "Não tem conta? Cadastrar"}
+            </button>
+          </div>
 
           <p className="text-xs text-center text-muted-foreground mt-8">
             Problemas para acessar? Contate a secretaria acadêmica.
