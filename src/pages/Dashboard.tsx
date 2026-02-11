@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { AppLayout } from "@/components/AppLayout";
 import { StatCard } from "@/components/StatCard";
 import { PageHeader } from "@/components/PageHeader";
@@ -7,6 +8,7 @@ import { Users, GraduationCap, ClipboardList, FileText, TrendingUp, BookOpen } f
 import { supabase } from "@/integrations/supabase/client";
 
 const Dashboard = () => {
+  const navigate = useNavigate();
   const [stats, setStats] = useState({ alunos: 0, turmas: 0, reqPendentes: 0, documentos: 0 });
   const [requerimentos, setRequerimentos] = useState<any[]>([]);
   const [turmas, setTurmas] = useState<any[]>([]);
@@ -91,13 +93,14 @@ const Dashboard = () => {
 
       <div className="mt-8 grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { icon: Users, label: "Novo Aluno", color: "bg-primary/10 text-primary" },
-          { icon: GraduationCap, label: "Nova Turma", color: "bg-accent/10 text-accent" },
-          { icon: TrendingUp, label: "Lançar Notas", color: "bg-success/10 text-success" },
-          { icon: FileText, label: "Novo Documento", color: "bg-info/10 text-info" },
+          { icon: Users, label: "Novo Aluno", color: "bg-primary/10 text-primary", path: "/alunos" },
+          { icon: GraduationCap, label: "Nova Turma", color: "bg-accent/10 text-accent", path: "/turmas" },
+          { icon: TrendingUp, label: "Lançar Notas", color: "bg-success/10 text-success", path: "/notas" },
+          { icon: FileText, label: "Novo Documento", color: "bg-info/10 text-info", path: "/documentos" },
         ].map((action) => (
           <button
             key={action.label}
+            onClick={() => navigate(action.path)}
             className="flex flex-col items-center gap-2 p-4 rounded-xl border border-border/50 bg-card hover:shadow-md hover:-translate-y-0.5 transition-all duration-200"
           >
             <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${action.color}`}>
