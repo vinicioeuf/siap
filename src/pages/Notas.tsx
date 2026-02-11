@@ -11,15 +11,45 @@ const Notas = () => {
   const [notas, setNotas] = useState<any[]>([]);
 
   useEffect(() => {
-    supabase
-      .from("notas")
-      .select("*, alunos!inner(matricula, profiles:profiles!alunos_user_id_fkey(full_name)), disciplinas(nome)")
-      .order("created_at", { ascending: false })
-      .then(({ data }) => setNotas(data || []));
+    const fetchNotas = async () => {
+      const { data } = await supabase
+        .from("notas")
+        .select("*, disciplinas(nome)")
+        .order("created_at", { ascending: false });
+
+      if (data && data.length > 0) {
+        // Get aluno IDs and fetch their profiles
+        const alunoIds = [...new Set(data.map((n) => n.aluno_id))];
+        const { data: alunos } = await supabase
+          .from("alunos")
+          .select("id, user_id, matricula")
+          .in("id", alunoIds);
+
+        const userIds = alunos?.map((a) => a.user_id) || [];
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("user_id, full_name");
+
+        const profileMap = new Map();
+        profiles?.forEach((p) => profileMap.set(p.user_id, p));
+
+        const alunoMap = new Map();
+        alunos?.forEach((a) => alunoMap.set(a.id, { ...a, profile: profileMap.get(a.user_id) }));
+
+        const enriched = data.map((n) => ({
+          ...n,
+          aluno: alunoMap.get(n.aluno_id) || null,
+        }));
+        setNotas(enriched);
+      } else {
+        setNotas([]);
+      }
+    };
+    fetchNotas();
   }, []);
 
   const filtered = notas.filter((n) => {
-    const alunoNome = n.alunos?.profiles?.full_name || "";
+    const alunoNome = n.aluno?.profile?.full_name || "";
     const disciplina = n.disciplinas?.nome || "";
     return alunoNome.toLowerCase().includes(search.toLowerCase()) || disciplina.toLowerCase().includes(search.toLowerCase());
   });
@@ -55,7 +85,7 @@ const Notas = () => {
             <tbody className="divide-y divide-border/50">
               {filtered.map((nota) => (
                 <tr key={nota.id} className="hover:bg-muted/20 transition-colors">
-                  <td className="px-4 py-3 text-sm font-medium text-foreground">{nota.alunos?.profiles?.full_name || "—"}</td>
+                  <td className="px-4 py-3 text-sm font-medium text-foreground">{nota.aluno?.profile?.full_name || "—"}</td>
                   <td className="px-4 py-3 text-sm text-foreground">{nota.disciplinas?.nome || "—"}</td>
                   <td className="px-4 py-3 text-sm text-center text-foreground">{formatNota(nota.nota1)}</td>
                   <td className="px-4 py-3 text-sm text-center text-foreground">{formatNota(nota.nota2)}</td>
