@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { School, Eye, EyeOff, BookOpen, Users, BarChart3, Shield } from "lucide-react";
+import { School, Eye, EyeOff, BookOpen, Users, BarChart3, Shield, Lock } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "@/hooks/use-toast";
 
@@ -15,12 +15,10 @@ const features = [
 
 const Login = () => {
   const navigate = useNavigate();
-  const { signIn, signUp, user } = useAuth();
+  const { signIn, user } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [fullName, setFullName] = useState("");
-  const [isSignUp, setIsSignUp] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
 
   if (user) {
@@ -32,21 +30,11 @@ const Login = () => {
     e.preventDefault();
     setIsLoading(true);
 
-    if (isSignUp) {
-      const { error } = await signUp(email, password, fullName);
-      if (error) {
-        toast({ title: "Erro no cadastro", description: error.message, variant: "destructive" });
-      } else {
-        toast({ title: "Cadastro realizado!", description: "Verifique seu e-mail para confirmar a conta." });
-        setIsSignUp(false);
-      }
+    const { error } = await signIn(email, password);
+    if (error) {
+      toast({ title: "Erro no login", description: error.message, variant: "destructive" });
     } else {
-      const { error } = await signIn(email, password);
-      if (error) {
-        toast({ title: "Erro no login", description: error.message, variant: "destructive" });
-      } else {
-        navigate("/");
-      }
+      navigate("/");
     }
     setIsLoading(false);
   };
@@ -89,7 +77,8 @@ const Login = () => {
         </div>
 
         <div className="relative z-10 text-primary-foreground/40 text-xs">
-          © 2026 SIAP. Todos os direitos reservados.
+          <p>&copy; {new Date().getFullYear()} SIAP. Todos os direitos reservados.</p>
+          <p className="mt-1 text-primary-foreground/25">Versão 2.0.0 &middot; Ambiente seguro</p>
         </div>
       </div>
 
@@ -104,26 +93,13 @@ const Login = () => {
           </div>
 
           <h2 className="text-2xl font-bold text-foreground mb-1.5 tracking-tight">
-            {isSignUp ? "Criar Conta" : "Bem-vindo de volta"}
+            Bem-vindo de volta
           </h2>
           <p className="text-sm text-muted-foreground mb-8">
-            {isSignUp ? "Preencha os dados para se cadastrar" : "Acesse sua conta para continuar"}
+            Acesse sua conta para continuar
           </p>
 
           <form onSubmit={handleSubmit} className="space-y-5">
-            {isSignUp && (
-              <div>
-                <label className="text-sm font-medium text-foreground mb-1.5 block">Nome Completo</label>
-                <Input
-                  type="text"
-                  placeholder="Seu nome completo"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  required
-                  className="rounded-xl h-11"
-                />
-              </div>
-            )}
             <div>
               <label className="text-sm font-medium text-foreground mb-1.5 block">E-mail</label>
               <Input
@@ -156,37 +132,41 @@ const Login = () => {
                 </button>
               </div>
             </div>
-            {!isSignUp && (
-              <div className="flex items-center justify-between">
-                <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
-                  <input type="checkbox" className="rounded border-border accent-primary" />
-                  Lembrar-me
-                </label>
-                <a href="#" className="text-sm text-primary hover:text-primary/80 transition-colors font-medium">Esqueci a senha</a>
-              </div>
-            )}
+            <div className="flex items-center justify-between">
+              <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
+                <input type="checkbox" className="rounded border-border accent-primary" />
+                Lembrar-me
+              </label>
+              <a href="#" className="text-sm text-primary hover:text-primary/80 transition-colors font-medium">Esqueci a senha</a>
+            </div>
             <Button type="submit" className="w-full h-11 rounded-xl text-sm font-semibold shadow-sm" disabled={isLoading}>
               {isLoading ? (
                 <span className="flex items-center gap-2">
                   <span className="h-4 w-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
                   Aguarde...
                 </span>
-              ) : isSignUp ? "Cadastrar" : "Entrar"}
+              ) : "Entrar"}
             </Button>
           </form>
 
-          <div className="mt-8 text-center">
-            <button
-              type="button"
-              onClick={() => setIsSignUp(!isSignUp)}
-              className="text-sm text-primary hover:text-primary/80 transition-colors font-medium"
-            >
-              {isSignUp ? "Já tem conta? Entrar" : "Não tem conta? Cadastrar"}
-            </button>
+          <div className="mt-8 p-4 rounded-xl bg-muted/30 border border-border/50">
+            <div className="flex items-center gap-2 mb-2">
+              <Lock className="h-4 w-4 text-muted-foreground" />
+              <p className="text-xs font-semibold text-foreground">Acesso Restrito</p>
+            </div>
+            <p className="text-[11px] text-muted-foreground leading-relaxed">
+              O cadastro de novos usuários é exclusivo para administradores.
+              Se você precisa de acesso, entre em contato com a secretaria acadêmica.
+            </p>
           </div>
 
           <p className="text-xs text-center text-muted-foreground mt-8">
             Problemas para acessar? Contate a secretaria acadêmica.
+          </p>
+
+          <p className="text-[10px] text-center text-muted-foreground/50 mt-4 leading-relaxed">
+            Em conformidade com a LGPD (Lei Geral de Proteção de Dados).
+            <br />Os dados são tratados de forma segura e confidencial.
           </p>
         </div>
       </div>

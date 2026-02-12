@@ -39,11 +39,14 @@ export function PageHeader({ title, description, actions, breadcrumbs }: PageHea
 
       {/* Title & Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-foreground tracking-tight">{title}</h1>
-          {description && (
-            <p className="text-sm text-muted-foreground mt-1">{description}</p>
-          )}
+        <div className="flex items-center gap-3">
+          <div className="hidden sm:block w-1 h-8 rounded-full bg-primary" />
+          <div>
+            <h1 className="text-xl font-bold text-foreground tracking-tight">{title}</h1>
+            {description && (
+              <p className="text-sm text-muted-foreground mt-0.5">{description}</p>
+            )}
+          </div>
         </div>
         {actions && <div className="flex items-center gap-2 shrink-0">{actions}</div>}
       </div>

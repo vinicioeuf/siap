@@ -11,27 +11,43 @@ import {
   ChevronRight,
   School,
   X,
+  UserCog,
+  ShieldCheck,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { hasPermission, type Permission, type AppRole, getRoleLabel } from "@/lib/permissions";
 
-const roleLabels: Record<string, string> = {
-  admin: "Administrador",
-  secretaria: "Secretaria Acadêmica",
-  professor: "Professor",
-  aluno: "Aluno",
-  coordenador: "Coordenador",
+const iconMap: Record<string, any> = {
+  LayoutDashboard,
+  Users,
+  GraduationCap,
+  BookOpen,
+  FileText,
+  ClipboardList,
+  UserCog,
+  ShieldCheck,
 };
 
-const navItems = [
-  { to: "/", icon: LayoutDashboard, label: "Dashboard" },
-  { to: "/alunos", icon: Users, label: "Alunos" },
-  { to: "/turmas", icon: GraduationCap, label: "Turmas" },
-  { to: "/notas", icon: BookOpen, label: "Notas" },
-  { to: "/documentos", icon: FileText, label: "Documentos" },
-  { to: "/requerimentos", icon: ClipboardList, label: "Requerimentos" },
+interface NavItemDef {
+  to: string;
+  icon: string;
+  label: string;
+  permission: Permission;
+}
+
+const allNavItems: NavItemDef[] = [
+  { to: "/dashboard", icon: "LayoutDashboard", label: "Dashboard", permission: "dashboard.admin" },
+  { to: "/painel-aluno", icon: "GraduationCap", label: "Meu Painel", permission: "dashboard.aluno" },
+  { to: "/usuarios", icon: "UserCog", label: "Usuários", permission: "users.view" },
+  { to: "/alunos", icon: "Users", label: "Alunos", permission: "alunos.view" },
+  { to: "/turmas", icon: "GraduationCap", label: "Turmas", permission: "turmas.view" },
+  { to: "/notas", icon: "BookOpen", label: "Notas", permission: "notas.view" },
+  { to: "/documentos", icon: "FileText", label: "Documentos", permission: "documentos.view" },
+  { to: "/requerimentos", icon: "ClipboardList", label: "Requerimentos", permission: "requerimentos.view" },
+  { to: "/auditoria", icon: "ShieldCheck", label: "Auditoria", permission: "audit.view" },
 ];
 
 interface AppSidebarProps {
@@ -54,6 +70,11 @@ export function AppSidebar({ mobileOpen, onMobileClose }: AppSidebarProps) {
     .slice(0, 2)
     .toUpperCase();
   const primaryRole = roles[0] || "aluno";
+
+  // Filter nav items based on user permissions
+  const navItems = allNavItems.filter((item) =>
+    hasPermission(roles as AppRole[], item.permission)
+  );
 
   // Close mobile sidebar on route change
   useEffect(() => {
@@ -80,15 +101,15 @@ export function AppSidebar({ mobileOpen, onMobileClose }: AppSidebarProps) {
       )}
     >
       {/* Logo */}
-      <div className="flex items-center justify-between px-4 py-5 border-b border-sidebar-border">
+      <div className="flex items-center justify-between px-4 py-4 border-b border-sidebar-border">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl gradient-primary shadow-lg shadow-primary/20">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg gradient-primary shadow-lg shadow-primary/20">
             <School className="h-5 w-5 text-primary-foreground" />
           </div>
           {(!collapsed || isMobile) && (
             <div className="animate-slide-in">
               <h1 className="text-sm font-bold text-sidebar-foreground tracking-tight">SIAP</h1>
-              <p className="text-[10px] text-sidebar-foreground/40 font-medium">Gestão Acadêmica</p>
+              <p className="text-[10px] text-sidebar-foreground/30 font-medium tracking-wide">Sistema Acadêmico</p>
             </div>
           )}
         </div>
@@ -113,45 +134,48 @@ export function AppSidebar({ mobileOpen, onMobileClose }: AppSidebarProps) {
 
       {/* Nav */}
       <nav className="flex-1 px-3 py-1 space-y-0.5 overflow-y-auto">
-        {navItems.map((item) => (
-          <RouterNavLink
-            key={item.to}
-            to={item.to}
-            end={item.to === "/"}
-            className={({ isActive }) =>
-              cn(
-                "flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all duration-200 group relative",
-                isActive
-                  ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-lg shadow-primary/20"
-                  : "text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-foreground"
-              )
-            }
-          >
-            <item.icon className="h-[18px] w-[18px] shrink-0 transition-transform duration-200 group-hover:scale-110" />
-            {(!collapsed || isMobile) && (
-              <span className="animate-slide-in truncate">{item.label}</span>
-            )}
-          </RouterNavLink>
-        ))}
+        {navItems.map((item) => {
+          const Icon = iconMap[item.icon] || LayoutDashboard;
+          return (
+            <RouterNavLink
+              key={item.to}
+              to={item.to}
+              end={item.to === "/dashboard" || item.to === "/painel-aluno"}
+              className={({ isActive }) =>
+                cn(
+                  "flex items-center gap-3 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-200 group relative",
+                  isActive
+                    ? "bg-sidebar-primary text-sidebar-primary-foreground shadow-md shadow-primary/15"
+                    : "text-sidebar-foreground/55 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                )
+              }
+            >
+              <Icon className="h-[18px] w-[18px] shrink-0 transition-transform duration-200 group-hover:scale-110" />
+              {(!collapsed || isMobile) && (
+                <span className="animate-slide-in truncate">{item.label}</span>
+              )}
+            </RouterNavLink>
+          );
+        })}
       </nav>
 
       {/* User + Actions */}
       <div className="border-t border-sidebar-border p-3 space-y-2">
-        <div className="flex items-center gap-3 px-2 py-2.5 rounded-xl bg-sidebar-accent/50">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/70 text-sidebar-primary-foreground text-xs font-bold shadow-sm">
+        <div className="flex items-center gap-3 px-2 py-2 rounded-lg bg-sidebar-accent/50">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-primary/70 text-sidebar-primary-foreground text-[11px] font-bold shadow-sm">
             {initials}
           </div>
           {(!collapsed || isMobile) && (
             <div className="animate-slide-in min-w-0 flex-1">
               <p className="text-xs font-semibold text-sidebar-foreground truncate">{displayName}</p>
-              <p className="text-[10px] text-sidebar-foreground/40 font-medium">{roleLabels[primaryRole] || primaryRole}</p>
+              <p className="text-[10px] text-sidebar-foreground/35 font-medium">{getRoleLabel(primaryRole as AppRole)}</p>
             </div>
           )}
         </div>
         <div className="flex gap-1">
           <button
             onClick={handleSignOut}
-            className="flex flex-1 items-center justify-center gap-2 py-2.5 rounded-xl text-sidebar-foreground/40 hover:bg-destructive/15 hover:text-destructive transition-all duration-200"
+            className="flex flex-1 items-center justify-center gap-2 py-2 rounded-lg text-sidebar-foreground/40 hover:bg-destructive/15 hover:text-destructive transition-all duration-200"
           >
             <LogOut className="h-4 w-4" />
             {(!collapsed || isMobile) && <span className="text-xs font-medium">Sair</span>}
@@ -159,7 +183,7 @@ export function AppSidebar({ mobileOpen, onMobileClose }: AppSidebarProps) {
           {!isMobile && (
             <button
               onClick={() => setCollapsed(!collapsed)}
-              className="flex items-center justify-center py-2.5 px-2.5 rounded-xl text-sidebar-foreground/40 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-all duration-200"
+              className="flex items-center justify-center py-2 px-2.5 rounded-lg text-sidebar-foreground/40 hover:bg-sidebar-accent hover:text-sidebar-foreground transition-all duration-200"
             >
               {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
             </button>
