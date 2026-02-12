@@ -311,6 +311,8 @@ export type Database = {
           nota3: number | null
           nota4: number | null
           observacao: string | null
+          professor_id: string | null
+          semestre_letivo: string | null
           status: string | null
           turma_id: string | null
           updated_at: string
@@ -326,6 +328,8 @@ export type Database = {
           nota3?: number | null
           nota4?: number | null
           observacao?: string | null
+          professor_id?: string | null
+          semestre_letivo?: string | null
           status?: string | null
           turma_id?: string | null
           updated_at?: string
@@ -341,6 +345,8 @@ export type Database = {
           nota3?: number | null
           nota4?: number | null
           observacao?: string | null
+          professor_id?: string | null
+          semestre_letivo?: string | null
           status?: string | null
           turma_id?: string | null
           updated_at?: string
@@ -365,6 +371,90 @@ export type Database = {
             columns: ["turma_id"]
             isOneToOne: false
             referencedRelation: "turmas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      professor_disciplinas: {
+        Row: {
+          id: string
+          professor_id: string
+          disciplina_id: string
+          turma_id: string | null
+          ano: number | null
+          semestre: number | null
+          ativo: boolean | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          professor_id: string
+          disciplina_id: string
+          turma_id?: string | null
+          ano?: number | null
+          semestre?: number | null
+          ativo?: boolean | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          professor_id?: string
+          disciplina_id?: string
+          turma_id?: string | null
+          ano?: number | null
+          semestre?: number | null
+          ativo?: boolean | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professor_disciplinas_disciplina_id_fkey"
+            columns: ["disciplina_id"]
+            isOneToOne: false
+            referencedRelation: "disciplinas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professor_disciplinas_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "turmas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      turma_disciplinas: {
+        Row: {
+          id: string
+          turma_id: string
+          disciplina_id: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          turma_id: string
+          disciplina_id: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          turma_id?: string
+          disciplina_id?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "turma_disciplinas_turma_id_fkey"
+            columns: ["turma_id"]
+            isOneToOne: false
+            referencedRelation: "turmas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "turma_disciplinas_disciplina_id_fkey"
+            columns: ["disciplina_id"]
+            isOneToOne: false
+            referencedRelation: "disciplinas"
             referencedColumns: ["id"]
           },
         ]
@@ -526,6 +616,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_alunos_by_turma: {
+        Args: { _turma_id: string }
+        Returns: { aluno_id: string; aluno_nome: string; matricula: string }[]
+      }
+      get_professor_disciplinas: {
+        Args: { _professor_id: string }
+        Returns: { disciplina_id: string; disciplina_nome: string; turma_id: string; turma_nome: string; curso_nome: string }[]
+      }
       get_user_roles: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"][]

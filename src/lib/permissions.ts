@@ -110,6 +110,7 @@ const ROLE_PERMISSIONS: Record<AppRole, Permission[]> = {
     "dashboard.admin",
   ],
   aluno: [
+    "notas.view",
     "notas.view_own",
     "frequencia.view",
     "documentos.view",

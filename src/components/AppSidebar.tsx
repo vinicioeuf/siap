@@ -44,6 +44,7 @@ const allNavItems: NavItemDef[] = [
   { to: "/usuarios", icon: "UserCog", label: "Usuários", permission: "users.view" },
   { to: "/alunos", icon: "Users", label: "Alunos", permission: "alunos.view" },
   { to: "/turmas", icon: "GraduationCap", label: "Turmas", permission: "turmas.view" },
+  { to: "/disciplinas", icon: "BookOpen", label: "Disciplinas", permission: "disciplinas.view" },
   { to: "/notas", icon: "BookOpen", label: "Notas", permission: "notas.view" },
   { to: "/documentos", icon: "FileText", label: "Documentos", permission: "documentos.view" },
   { to: "/requerimentos", icon: "ClipboardList", label: "Requerimentos", permission: "requerimentos.view" },

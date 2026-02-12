@@ -6,7 +6,7 @@ import { SkeletonCard } from "@/components/Skeleton";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Users, Clock, Sun, Moon, Sunset, Trash2, MoreVertical, Archive, AlertTriangle } from "lucide-react";
+import { Plus, Users, Clock, Sun, Moon, Sunset, Trash2, MoreVertical, Archive, AlertTriangle, Pencil, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -31,6 +31,16 @@ const Turmas = () => {
   const [form, setForm] = useState({ nome: "", codigo: "", curso_id: "", turno: "matutino", max_alunos: "40" });
   const [cursoForm, setCursoForm] = useState({ nome: "", descricao: "", duracao_semestres: "1" });
   const [saving, setSaving] = useState(false);
+
+  // Edit turma state
+  const [editTurmaDialogOpen, setEditTurmaDialogOpen] = useState(false);
+  const [editingTurma, setEditingTurma] = useState<any>(null);
+  const [editTurmaForm, setEditTurmaForm] = useState({ nome: "", codigo: "", curso_id: "", turno: "matutino", max_alunos: "40", ano: "" });
+
+  // Edit curso state
+  const [editCursoDialogOpen, setEditCursoDialogOpen] = useState(false);
+  const [editingCurso, setEditingCurso] = useState<any>(null);
+  const [editCursoForm, setEditCursoForm] = useState({ nome: "", descricao: "", duracao_semestres: "1" });
 
   // Deletion state
   const [deleteTarget, setDeleteTarget] = useState<{ type: "curso" | "turma"; item: any } | null>(null);
@@ -156,6 +166,78 @@ const Turmas = () => {
     setDeleting(false);
   };
 
+  // ========== EDIT TURMA ==========
+  const openEditTurma = (turma: any) => {
+    setEditingTurma(turma);
+    setEditTurmaForm({
+      nome: turma.nome || "",
+      codigo: turma.codigo || "",
+      curso_id: turma.curso_id || "",
+      turno: turma.turno || "matutino",
+      max_alunos: String(turma.max_alunos || 40),
+      ano: String(turma.ano || new Date().getFullYear()),
+    });
+    setEditTurmaDialogOpen(true);
+  };
+
+  const handleUpdateTurma = async () => {
+    if (!editingTurma || saving) return;
+    if (!editTurmaForm.nome.trim()) { toast({ title: "Nome é obrigatório", variant: "destructive" }); return; }
+    setSaving(true);
+    const { error } = await supabase.from("turmas").update({
+      nome: editTurmaForm.nome.trim(),
+      codigo: editTurmaForm.codigo.trim() || null,
+      curso_id: editTurmaForm.curso_id || null,
+      turno: editTurmaForm.turno,
+      max_alunos: parseInt(editTurmaForm.max_alunos) || 40,
+      ano: parseInt(editTurmaForm.ano) || new Date().getFullYear(),
+    }).eq("id", editingTurma.id);
+    if (error) {
+      toast({ title: "Erro ao atualizar turma", description: error.message, variant: "destructive" });
+    } else {
+      await createAuditLog({ action: "update", entity_type: "turma", entity_id: editingTurma.id, entity_name: editTurmaForm.nome });
+      toast({ title: "Turma atualizada com sucesso!" });
+      setEditTurmaDialogOpen(false);
+      setEditingTurma(null);
+      fetchData();
+    }
+    setSaving(false);
+  };
+
+  // ========== EDIT CURSO ==========
+  const openEditCurso = (curso: any) => {
+    setEditingCurso(curso);
+    setEditCursoForm({
+      nome: curso.nome || "",
+      descricao: curso.descricao || "",
+      duracao_semestres: String(curso.duracao_semestres || 1),
+    });
+    setEditCursoDialogOpen(true);
+  };
+
+  const handleUpdateCurso = async () => {
+    if (!editingCurso || saving) return;
+    if (!editCursoForm.nome.trim()) { toast({ title: "Nome é obrigatório", variant: "destructive" }); return; }
+    setSaving(true);
+    const { error } = await supabase.from("cursos").update({
+      nome: editCursoForm.nome.trim(),
+      descricao: editCursoForm.descricao.trim() || null,
+      duracao_semestres: parseInt(editCursoForm.duracao_semestres) || 1,
+    }).eq("id", editingCurso.id);
+    if (error) {
+      toast({ title: "Erro ao atualizar curso", description: error.message, variant: "destructive" });
+    } else {
+      await createAuditLog({ action: "update", entity_type: "curso", entity_id: editingCurso.id, entity_name: editCursoForm.nome });
+      toast({ title: "Curso atualizado com sucesso!" });
+      setEditCursoDialogOpen(false);
+      setEditingCurso(null);
+      fetchData();
+    }
+    setSaving(false);
+  };
+
+  const selectClass = "flex h-10 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/30";
+
   return (
     <AppLayout>
       <PageHeader
@@ -207,11 +289,7 @@ const Turmas = () => {
                     </div>
                     <div>
                       <label className="text-sm font-medium text-foreground mb-1.5 block">Curso</label>
-                      <select
-                        className="flex h-10 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/30"
-                        value={form.curso_id}
-                        onChange={(e) => setForm({ ...form, curso_id: e.target.value })}
-                      >
+                      <select className={selectClass} value={form.curso_id} onChange={(e) => setForm({ ...form, curso_id: e.target.value })}>
                         <option value="">Selecione...</option>
                         {cursos.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
                       </select>
@@ -219,11 +297,7 @@ const Turmas = () => {
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <label className="text-sm font-medium text-foreground mb-1.5 block">Turno</label>
-                        <select
-                          className="flex h-10 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/30"
-                          value={form.turno}
-                          onChange={(e) => setForm({ ...form, turno: e.target.value })}
-                        >
+                        <select className={selectClass} value={form.turno} onChange={(e) => setForm({ ...form, turno: e.target.value })}>
                           <option value="matutino">Matutino</option>
                           <option value="vespertino">Vespertino</option>
                           <option value="noturno">Noturno</option>
@@ -286,6 +360,12 @@ const Turmas = () => {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="rounded-xl">
                           <DropdownMenuItem
+                            onClick={(e) => { e.stopPropagation(); openEditTurma(turma); }}
+                            className="gap-2"
+                          >
+                            <Pencil className="h-3.5 w-3.5" /> Editar Turma
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
                             onClick={(e) => { e.stopPropagation(); openDeleteDialog("turma", turma); }}
                             className="text-destructive focus:text-destructive gap-2"
                           >
@@ -328,15 +408,28 @@ const Turmas = () => {
                     <p className="text-sm font-semibold text-foreground">{curso.nome}</p>
                     <p className="text-xs text-muted-foreground">{curso.descricao || "Sem descrição"} · {curso.duracao_semestres} semestre(s)</p>
                   </div>
-                  {canDelete && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 w-8 p-0 rounded-lg hover:bg-destructive/10 hover:text-destructive opacity-0 group-hover:opacity-100 transition-all"
-                      onClick={() => openDeleteDialog("curso", curso)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                  {canManage && (
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0 rounded-lg hover:bg-primary/10"
+                        onClick={() => openEditCurso(curso)}
+                        title="Editar curso"
+                      >
+                        <Pencil className="h-4 w-4 text-muted-foreground" />
+                      </Button>
+                      {canDelete && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0 rounded-lg hover:bg-destructive/10 hover:text-destructive"
+                          onClick={() => openDeleteDialog("curso", curso)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
                   )}
                 </div>
               ))}
@@ -344,6 +437,80 @@ const Turmas = () => {
           </div>
         </div>
       )}
+
+      {/* Edit Turma Dialog */}
+      <Dialog open={editTurmaDialogOpen} onOpenChange={(open) => { setEditTurmaDialogOpen(open); if (!open) setEditingTurma(null); }}>
+        <DialogContent className="max-w-md rounded-xl">
+          <DialogHeader><DialogTitle className="text-lg">Editar Turma</DialogTitle></DialogHeader>
+          {editingTurma && (
+            <div className="space-y-4 mt-2">
+              <div>
+                <label className="text-sm font-medium text-foreground mb-1.5 block">Nome *</label>
+                <Input value={editTurmaForm.nome} onChange={(e) => setEditTurmaForm({ ...editTurmaForm, nome: e.target.value })} className="rounded-xl" />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-foreground mb-1.5 block">Código</label>
+                <Input value={editTurmaForm.codigo} onChange={(e) => setEditTurmaForm({ ...editTurmaForm, codigo: e.target.value })} className="rounded-xl" />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-foreground mb-1.5 block">Curso</label>
+                <select className={selectClass} value={editTurmaForm.curso_id} onChange={(e) => setEditTurmaForm({ ...editTurmaForm, curso_id: e.target.value })}>
+                  <option value="">Selecione...</option>
+                  {cursos.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
+                </select>
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="text-sm font-medium text-foreground mb-1.5 block">Turno</label>
+                  <select className={selectClass} value={editTurmaForm.turno} onChange={(e) => setEditTurmaForm({ ...editTurmaForm, turno: e.target.value })}>
+                    <option value="matutino">Matutino</option>
+                    <option value="vespertino">Vespertino</option>
+                    <option value="noturno">Noturno</option>
+                    <option value="integral">Integral</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-foreground mb-1.5 block">Máx. Alunos</label>
+                  <Input type="number" value={editTurmaForm.max_alunos} onChange={(e) => setEditTurmaForm({ ...editTurmaForm, max_alunos: e.target.value })} className="rounded-xl" />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-foreground mb-1.5 block">Ano</label>
+                  <Input type="number" value={editTurmaForm.ano} onChange={(e) => setEditTurmaForm({ ...editTurmaForm, ano: e.target.value })} className="rounded-xl" />
+                </div>
+              </div>
+              <Button onClick={handleUpdateTurma} disabled={saving} className="w-full rounded-xl h-11">
+                {saving ? (<><Loader2 className="h-4 w-4 mr-2 animate-spin" />Salvando...</>) : "Salvar Alterações"}
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Curso Dialog */}
+      <Dialog open={editCursoDialogOpen} onOpenChange={(open) => { setEditCursoDialogOpen(open); if (!open) setEditingCurso(null); }}>
+        <DialogContent className="max-w-md rounded-xl">
+          <DialogHeader><DialogTitle className="text-lg">Editar Curso</DialogTitle></DialogHeader>
+          {editingCurso && (
+            <div className="space-y-4 mt-2">
+              <div>
+                <label className="text-sm font-medium text-foreground mb-1.5 block">Nome *</label>
+                <Input value={editCursoForm.nome} onChange={(e) => setEditCursoForm({ ...editCursoForm, nome: e.target.value })} className="rounded-xl" />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-foreground mb-1.5 block">Descrição</label>
+                <Input value={editCursoForm.descricao} onChange={(e) => setEditCursoForm({ ...editCursoForm, descricao: e.target.value })} className="rounded-xl" />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-foreground mb-1.5 block">Duração (semestres)</label>
+                <Input type="number" value={editCursoForm.duracao_semestres} onChange={(e) => setEditCursoForm({ ...editCursoForm, duracao_semestres: e.target.value })} className="rounded-xl" />
+              </div>
+              <Button onClick={handleUpdateCurso} disabled={saving} className="w-full rounded-xl h-11">
+                {saving ? (<><Loader2 className="h-4 w-4 mr-2 animate-spin" />Salvando...</>) : "Salvar Alterações"}
+              </Button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       {/* Delete Confirmation Dialog */}
       <ConfirmDialog
