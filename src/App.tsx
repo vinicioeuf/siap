@@ -16,6 +16,7 @@ import Requerimentos from "./pages/Requerimentos";
 import Usuarios from "./pages/Usuarios";
 import PainelAluno from "./pages/PainelAluno";
 import Auditoria from "./pages/Auditoria";
+import Disciplinas from "./pages/Disciplinas";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -45,6 +46,7 @@ const App = () => (
             <Route path="/usuarios" element={<ProtectedRoute requiredPermission="users.view"><Usuarios /></ProtectedRoute>} />
             <Route path="/alunos" element={<ProtectedRoute requiredPermission="alunos.view"><Alunos /></ProtectedRoute>} />
             <Route path="/turmas" element={<ProtectedRoute requiredPermission="turmas.view"><Turmas /></ProtectedRoute>} />
+            <Route path="/disciplinas" element={<ProtectedRoute requiredPermission="disciplinas.view"><Disciplinas /></ProtectedRoute>} />
             <Route path="/notas" element={<ProtectedRoute requiredPermission="notas.view"><Notas /></ProtectedRoute>} />
             <Route path="/documentos" element={<ProtectedRoute requiredPermission="documentos.view"><Documentos /></ProtectedRoute>} />
             <Route path="/requerimentos" element={<ProtectedRoute requiredPermission="requerimentos.view"><Requerimentos /></ProtectedRoute>} />
