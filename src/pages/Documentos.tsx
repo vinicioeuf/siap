@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { PageHeader } from "@/components/PageHeader";
+import { EmptyState } from "@/components/EmptyState";
+import { SearchInput } from "@/components/SearchInput";
+import { SkeletonCard } from "@/components/Skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, FileText, FileImage, Download, Upload } from "lucide-react";
+import { Plus, FileText, FileImage, Download, Upload } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
@@ -24,6 +27,7 @@ const categoriaColors: Record<string, string> = {
 const Documentos = () => {
   const [search, setSearch] = useState("");
   const [documentos, setDocumentos] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const { user, hasRole } = useAuth();
   const canManage = hasRole("admin") || hasRole("secretaria");
@@ -33,8 +37,10 @@ const Documentos = () => {
   const [saving, setSaving] = useState(false);
 
   const fetchDocumentos = async () => {
+    setLoading(true);
     const { data } = await supabase.from("documentos").select("*").order("created_at", { ascending: false });
     setDocumentos(data || []);
+    setLoading(false);
   };
 
   useEffect(() => { fetchDocumentos(); }, []);
@@ -46,7 +52,6 @@ const Documentos = () => {
     }
     setSaving(true);
 
-    // Upload file to storage
     const filePath = `${user!.id}/${Date.now()}_${file.name}`;
     const { error: uploadError } = await supabase.storage.from("documentos").upload(filePath, file);
     if (uploadError) {
@@ -88,34 +93,39 @@ const Documentos = () => {
       <PageHeader
         title="Documentos"
         description="Gestão e organização de documentos acadêmicos"
+        breadcrumbs={[{ label: "Documentos" }]}
         actions={
           canManage ? (
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
               <DialogTrigger asChild>
-                <Button className="gap-2"><Upload className="h-4 w-4" /> Upload</Button>
+                <Button className="gap-2 rounded-xl shadow-sm"><Upload className="h-4 w-4" /> Upload</Button>
               </DialogTrigger>
-              <DialogContent className="max-w-md">
-                <DialogHeader><DialogTitle>Enviar Documento</DialogTitle></DialogHeader>
-                <div className="space-y-3 mt-2">
+              <DialogContent className="max-w-md rounded-2xl">
+                <DialogHeader><DialogTitle className="text-lg">Enviar Documento</DialogTitle></DialogHeader>
+                <div className="space-y-4 mt-2">
                   <div>
-                    <label className="text-sm font-medium text-foreground mb-1 block">Título *</label>
-                    <Input value={form.titulo} onChange={(e) => setForm({ ...form, titulo: e.target.value })} placeholder="Nome do documento" />
+                    <label className="text-sm font-medium text-foreground mb-1.5 block">Título *</label>
+                    <Input value={form.titulo} onChange={(e) => setForm({ ...form, titulo: e.target.value })} placeholder="Nome do documento" className="rounded-xl" />
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-foreground mb-1 block">Descrição</label>
-                    <Input value={form.descricao} onChange={(e) => setForm({ ...form, descricao: e.target.value })} />
+                    <label className="text-sm font-medium text-foreground mb-1.5 block">Descrição</label>
+                    <Input value={form.descricao} onChange={(e) => setForm({ ...form, descricao: e.target.value })} className="rounded-xl" />
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-foreground mb-1 block">Categoria</label>
-                    <select className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm" value={form.categoria} onChange={(e) => setForm({ ...form, categoria: e.target.value })}>
+                    <label className="text-sm font-medium text-foreground mb-1.5 block">Categoria</label>
+                    <select
+                      className="flex h-10 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/30"
+                      value={form.categoria}
+                      onChange={(e) => setForm({ ...form, categoria: e.target.value })}
+                    >
                       {Object.entries(categoriaLabels).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-foreground mb-1 block">Arquivo *</label>
-                    <Input type="file" accept=".pdf,.docx,.doc,.jpg,.jpeg,.png" onChange={(e) => setFile(e.target.files?.[0] || null)} />
+                    <label className="text-sm font-medium text-foreground mb-1.5 block">Arquivo *</label>
+                    <Input type="file" accept=".pdf,.docx,.doc,.jpg,.jpeg,.png" onChange={(e) => setFile(e.target.files?.[0] || null)} className="rounded-xl" />
                   </div>
-                  <Button onClick={handleUpload} disabled={saving} className="w-full">{saving ? "Enviando..." : "Enviar Documento"}</Button>
+                  <Button onClick={handleUpload} disabled={saving} className="w-full rounded-xl h-11">{saving ? "Enviando..." : "Enviar Documento"}</Button>
                 </div>
               </DialogContent>
             </Dialog>
@@ -123,44 +133,68 @@ const Documentos = () => {
         }
       />
 
-      <div className="mb-4">
-        <div className="relative max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Buscar documentos..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
-        </div>
+      <div className="mb-6">
+        <SearchInput
+          placeholder="Buscar documentos..."
+          value={search}
+          onChange={setSearch}
+          className="max-w-sm"
+        />
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filtered.length === 0 && (
-          <p className="col-span-full text-center py-12 text-muted-foreground text-sm">Nenhum documento encontrado.</p>
-        )}
-        {filtered.map((doc) => (
-          <div key={doc.id} className="bg-card rounded-xl border border-border/50 shadow-sm p-5 hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 cursor-pointer animate-fade-in">
-            <div className="flex items-start gap-3">
-              <div className={`flex h-10 w-10 items-center justify-center rounded-lg shrink-0 ${categoriaColors[doc.categoria] || categoriaColors.outro}`}>
-                {doc.arquivo_tipo?.includes("image") ? <FileImage className="h-5 w-5" /> : <FileText className="h-5 w-5" />}
+      {loading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={i} />)}
+        </div>
+      ) : filtered.length === 0 ? (
+        <EmptyState
+          variant={search ? "search" : "folder"}
+          title={search ? "Nenhum documento encontrado" : "Nenhum documento"}
+          description={search ? `Sem resultados para "${search}"` : "Os documentos enviados aparecerão aqui"}
+          action={
+            canManage && !search ? (
+              <Button onClick={() => setDialogOpen(true)} className="gap-2 rounded-xl">
+                <Upload className="h-4 w-4" /> Enviar Documento
+              </Button>
+            ) : undefined
+          }
+        />
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filtered.map((doc, index) => (
+            <div
+              key={doc.id}
+              className="bg-card rounded-2xl border border-border/50 shadow-sm p-6 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 cursor-pointer group animate-fade-in"
+              style={{ animationDelay: `${index * 50}ms` }}
+            >
+              <div className="flex items-start gap-4">
+                <div className={`flex h-12 w-12 items-center justify-center rounded-2xl shrink-0 transition-transform duration-300 group-hover:scale-110 ${categoriaColors[doc.categoria] || categoriaColors.outro}`}>
+                  {doc.arquivo_tipo?.includes("image") ? <FileImage className="h-5 w-5" /> : <FileText className="h-5 w-5" />}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-sm font-semibold text-foreground truncate group-hover:text-primary transition-colors">{doc.titulo}</h3>
+                  <p className="text-xs text-muted-foreground mt-0.5">{categoriaLabels[doc.categoria] || doc.categoria}</p>
+                </div>
               </div>
-              <div className="min-w-0 flex-1">
-                <h3 className="text-sm font-semibold text-foreground truncate">{doc.titulo}</h3>
-                <p className="text-xs text-muted-foreground mt-0.5">{categoriaLabels[doc.categoria] || doc.categoria}</p>
+              <div className="flex items-center justify-between mt-5 pt-4 border-t border-border/50">
+                <span className="text-xs font-medium text-muted-foreground px-2 py-0.5 rounded-md bg-muted/50 truncate max-w-[150px]">
+                  {doc.arquivo_nome || "—"}
+                </span>
+                {doc.arquivo_url && (
+                  <a href={doc.arquivo_url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
+                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-lg hover:bg-primary/10 hover:text-primary">
+                      <Download className="h-4 w-4" />
+                    </Button>
+                  </a>
+                )}
               </div>
+              <p className="text-[11px] text-muted-foreground mt-2">
+                Enviado em {new Date(doc.created_at).toLocaleDateString("pt-BR")}
+              </p>
             </div>
-            <div className="flex items-center justify-between mt-4 pt-3 border-t border-border/50">
-              <span className="text-xs font-medium text-muted-foreground px-2 py-0.5 rounded bg-muted">
-                {doc.arquivo_nome || "—"}
-              </span>
-              {doc.arquivo_url && (
-                <a href={doc.arquivo_url} target="_blank" rel="noopener noreferrer">
-                  <Button variant="ghost" size="sm" className="h-7 w-7 p-0"><Download className="h-3.5 w-3.5" /></Button>
-                </a>
-              )}
-            </div>
-            <p className="text-[10px] text-muted-foreground mt-2">
-              Enviado em {new Date(doc.created_at).toLocaleDateString("pt-BR")}
-            </p>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </AppLayout>
   );
 };
