@@ -1,9 +1,15 @@
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { School } from "lucide-react";
+import { School, ShieldAlert } from "lucide-react";
+import { hasPermission, type Permission, type AppRole } from "@/lib/permissions";
 
-export function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { user, loading } = useAuth();
+interface ProtectedRouteProps {
+  children: React.ReactNode;
+  requiredPermission?: Permission;
+}
+
+export function ProtectedRoute({ children, requiredPermission }: ProtectedRouteProps) {
+  const { user, loading, roles } = useAuth();
 
   if (loading) {
     return (
@@ -26,6 +32,26 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
   }
 
   if (!user) return <Navigate to="/login" replace />;
+
+  // Permission check
+  if (requiredPermission && !hasPermission(roles as AppRole[], requiredPermission)) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4 animate-fade-in text-center max-w-sm">
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-destructive/10">
+            <ShieldAlert className="h-7 w-7 text-destructive" />
+          </div>
+          <h2 className="text-lg font-bold text-foreground">Acesso Negado</h2>
+          <p className="text-sm text-muted-foreground">
+            Você não possui permissão para acessar esta página. Contate o administrador do sistema.
+          </p>
+          <a href="/" className="text-sm text-primary hover:text-primary/80 font-medium">
+            Voltar ao início
+          </a>
+        </div>
+      </div>
+    );
+  }
 
   return <>{children}</>;
 }

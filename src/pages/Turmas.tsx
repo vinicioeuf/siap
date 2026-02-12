@@ -3,13 +3,17 @@ import { AppLayout } from "@/components/AppLayout";
 import { PageHeader } from "@/components/PageHeader";
 import { EmptyState } from "@/components/EmptyState";
 import { SkeletonCard } from "@/components/Skeleton";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Users, Clock, Sun, Moon, Sunset } from "lucide-react";
+import { Plus, Users, Clock, Sun, Moon, Sunset, Trash2, MoreVertical, Archive, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { createAuditLog } from "@/lib/audit";
+import { hasPermission, type AppRole } from "@/lib/permissions";
 
 const turnoIcon: Record<string, typeof Sun> = { matutino: Sun, vespertino: Sunset, noturno: Moon };
 const turnoLabel: Record<string, string> = { matutino: "Matutino", vespertino: "Vespertino", noturno: "Noturno", integral: "Integral" };
@@ -20,12 +24,20 @@ const Turmas = () => {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [cursoDialogOpen, setCursoDialogOpen] = useState(false);
-  const { hasRole } = useAuth();
+  const { hasRole, roles } = useAuth();
   const canManage = hasRole("admin") || hasRole("secretaria");
+  const canDelete = hasPermission(roles as AppRole[], "cursos.delete");
 
   const [form, setForm] = useState({ nome: "", codigo: "", curso_id: "", turno: "matutino", max_alunos: "40" });
   const [cursoForm, setCursoForm] = useState({ nome: "", descricao: "", duracao_semestres: "1" });
   const [saving, setSaving] = useState(false);
+
+  // Deletion state
+  const [deleteTarget, setDeleteTarget] = useState<{ type: "curso" | "turma"; item: any } | null>(null);
+  const [deleteType, setDeleteType] = useState<"soft" | "hard">("soft");
+  const [deleteInfo, setDeleteInfo] = useState<any>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const fetchData = async () => {
     setLoading(true);
@@ -64,20 +76,84 @@ const Turmas = () => {
   const handleCreateCurso = async () => {
     if (!cursoForm.nome) { toast({ title: "Nome é obrigatório", variant: "destructive" }); return; }
     setSaving(true);
-    const { error } = await supabase.from("cursos").insert({
+    const { data, error } = await supabase.from("cursos").insert({
       nome: cursoForm.nome,
       descricao: cursoForm.descricao || null,
       duracao_semestres: parseInt(cursoForm.duracao_semestres) || 1,
-    });
+    }).select().single();
     if (error) {
       toast({ title: "Erro ao criar curso", description: error.message, variant: "destructive" });
     } else {
+      await createAuditLog({
+        action: "create",
+        entity_type: "curso",
+        entity_id: data?.id,
+        entity_name: cursoForm.nome,
+      });
       toast({ title: "Curso criado!" });
       setCursoForm({ nome: "", descricao: "", duracao_semestres: "1" });
       setCursoDialogOpen(false);
       fetchData();
     }
     setSaving(false);
+  };
+
+  const openDeleteDialog = async (type: "curso" | "turma", item: any) => {
+    setDeleteTarget({ type, item });
+    setDeleteType("soft");
+    setDeleteInfo(null);
+
+    if (type === "curso") {
+      const { data } = await supabase.rpc("can_hard_delete_curso", { _curso_id: item.id });
+      setDeleteInfo(data);
+    }
+
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    const { type, item } = deleteTarget;
+
+    if (deleteType === "soft") {
+      const table = type === "curso" ? "cursos" : "turmas";
+      const { error } = await supabase
+        .from(table)
+        .update({ ativo: false, deleted_at: new Date().toISOString() })
+        .eq("id", item.id);
+      if (error) {
+        toast({ title: "Erro ao desativar", description: error.message, variant: "destructive" });
+      } else {
+        await createAuditLog({
+          action: "soft_delete",
+          entity_type: type,
+          entity_id: item.id,
+          entity_name: item.nome,
+        });
+        toast({ title: `${type === "curso" ? "Curso" : "Turma"} desativado(a) com sucesso` });
+        fetchData();
+      }
+    } else {
+      const table = type === "curso" ? "cursos" : "turmas";
+      const { error } = await supabase.from(table).delete().eq("id", item.id);
+      if (error) {
+        toast({ title: "Erro ao excluir", description: error.message, variant: "destructive" });
+      } else {
+        await createAuditLog({
+          action: "delete",
+          entity_type: type,
+          entity_id: item.id,
+          entity_name: item.nome,
+        });
+        toast({ title: `${type === "curso" ? "Curso" : "Turma"} excluído(a) permanentemente` });
+        fetchData();
+      }
+    }
+
+    setDeleteDialogOpen(false);
+    setDeleteTarget(null);
+    setDeleting(false);
   };
 
   return (
@@ -95,7 +171,7 @@ const Turmas = () => {
                     <Plus className="h-4 w-4" /> Novo Curso
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-md rounded-2xl">
+                <DialogContent className="max-w-md rounded-xl">
                   <DialogHeader><DialogTitle className="text-lg">Novo Curso</DialogTitle></DialogHeader>
                   <div className="space-y-4 mt-2">
                     <div>
@@ -118,7 +194,7 @@ const Turmas = () => {
                 <DialogTrigger asChild>
                   <Button className="gap-2 rounded-xl shadow-sm"><Plus className="h-4 w-4" /> Nova Turma</Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-md rounded-2xl">
+                <DialogContent className="max-w-md rounded-xl">
                   <DialogHeader><DialogTitle className="text-lg">Nova Turma</DialogTitle></DialogHeader>
                   <div className="space-y-4 mt-2">
                     <div>
@@ -192,7 +268,7 @@ const Turmas = () => {
             return (
               <div
                 key={turma.id}
-                className="bg-card rounded-2xl border border-border/50 shadow-sm p-6 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 cursor-pointer group animate-fade-in"
+                className="bg-card rounded-xl border border-border/50 shadow-sm p-6 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 cursor-pointer group animate-fade-in"
                 style={{ animationDelay: `${index * 50}ms` }}
               >
                 <div className="flex items-start justify-between mb-5">
@@ -200,8 +276,27 @@ const Turmas = () => {
                     <h3 className="text-base font-bold text-foreground truncate group-hover:text-primary transition-colors">{turma.nome}</h3>
                     <p className="text-xs text-muted-foreground mt-1">{turma.cursos?.nome || "Sem curso"} · {turma.ano}</p>
                   </div>
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/10 text-accent transition-transform duration-300 group-hover:scale-110">
-                    <TurnoIcon className="h-4.5 w-4.5" />
+                  <div className="flex items-center gap-1.5">
+                    {canDelete && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <button className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors opacity-0 group-hover:opacity-100">
+                            <MoreVertical className="h-4 w-4" />
+                          </button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="rounded-xl">
+                          <DropdownMenuItem
+                            onClick={(e) => { e.stopPropagation(); openDeleteDialog("turma", turma); }}
+                            className="text-destructive focus:text-destructive gap-2"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" /> Excluir Turma
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
+                    <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent/10 text-accent transition-transform duration-300 group-hover:scale-110">
+                      <TurnoIcon className="h-4.5 w-4.5" />
+                    </div>
                   </div>
                 </div>
                 <div className="space-y-2.5">
@@ -218,6 +313,81 @@ const Turmas = () => {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {/* Course List with Delete */}
+      {canManage && cursos.length > 0 && (
+        <div className="mt-8">
+          <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3">Cursos Cadastrados</h3>
+          <div className="bg-card rounded-xl border border-border/50 shadow-sm overflow-hidden">
+            <div className="divide-y divide-border/50">
+              {cursos.map((curso) => (
+                <div key={curso.id} className="flex items-center justify-between px-6 py-3.5 hover:bg-muted/20 transition-colors group">
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">{curso.nome}</p>
+                    <p className="text-xs text-muted-foreground">{curso.descricao || "Sem descrição"} · {curso.duracao_semestres} semestre(s)</p>
+                  </div>
+                  {canDelete && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0 rounded-lg hover:bg-destructive/10 hover:text-destructive opacity-0 group-hover:opacity-100 transition-all"
+                      onClick={() => openDeleteDialog("curso", curso)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Dialog */}
+      <ConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        title={`Excluir ${deleteTarget?.type === "curso" ? "Curso" : "Turma"}`}
+        description={
+          deleteType === "soft"
+            ? `"${deleteTarget?.item?.nome}" será desativado(a) e poderá ser restaurado(a) posteriormente.`
+            : `"${deleteTarget?.item?.nome}" será excluído(a) permanentemente. Esta ação não pode ser desfeita.`
+        }
+        confirmLabel={deleteType === "soft" ? "Desativar" : "Excluir Permanentemente"}
+        variant={deleteType === "soft" ? "warning" : "danger"}
+        onConfirm={handleDelete}
+        loading={deleting}
+        details={
+          deleteInfo
+            ? [
+                { label: "Turmas vinculadas", value: deleteInfo.turmas_ativas || 0 },
+                { label: "Disciplinas vinculadas", value: deleteInfo.disciplinas_ativas || 0 },
+                { label: "Matrículas ativas", value: deleteInfo.matriculas_ativas || 0 },
+              ]
+            : undefined
+        }
+      />
+      {deleteDialogOpen && (
+        <div className="fixed bottom-4 right-4 z-[60] flex gap-2">
+          <Button
+            variant={deleteType === "soft" ? "default" : "outline"}
+            size="sm"
+            onClick={() => setDeleteType("soft")}
+            className="rounded-xl gap-1.5 text-xs"
+          >
+            <Archive className="h-3 w-3" /> Desativar
+          </Button>
+          <Button
+            variant={deleteType === "hard" ? "destructive" : "outline"}
+            size="sm"
+            onClick={() => setDeleteType("hard")}
+            className="rounded-xl gap-1.5 text-xs"
+            disabled={deleteInfo && !deleteInfo.can_delete && deleteTarget?.type === "curso"}
+          >
+            <Trash2 className="h-3 w-3" /> Excluir Definitivo
+          </Button>
         </div>
       )}
     </AppLayout>

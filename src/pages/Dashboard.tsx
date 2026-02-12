@@ -6,11 +6,14 @@ import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
 import { EmptyState } from "@/components/EmptyState";
 import { SkeletonCard, SkeletonList } from "@/components/Skeleton";
-import { Users, GraduationCap, ClipboardList, FileText, TrendingUp, BookOpen, ArrowRight } from "lucide-react";
+import { Users, GraduationCap, ClipboardList, FileText, TrendingUp, BookOpen, ArrowRight, Activity, Shield } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { getRoleLabel, type AppRole } from "@/lib/permissions";
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const { profile, roles } = useAuth();
   const [stats, setStats] = useState({ alunos: 0, turmas: 0, reqPendentes: 0, documentos: 0 });
   const [requerimentos, setRequerimentos] = useState<any[]>([]);
   const [turmas, setTurmas] = useState<any[]>([]);
@@ -42,10 +45,32 @@ const Dashboard = () => {
 
   return (
     <AppLayout>
-      <PageHeader
-        title="Dashboard"
-        description="Visão geral do sistema acadêmico"
-      />
+      {/* Institutional Welcome Banner */}
+      <div className="mb-8 animate-fade-in">
+        <div className="relative overflow-hidden rounded-xl bg-gradient-to-r from-primary to-primary/80 p-6 lg:p-8 text-primary-foreground">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_20%,rgba(255,255,255,0.1),transparent_50%)]" />
+          <div className="relative z-10 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2 mb-2">
+                <Activity className="h-4 w-4 opacity-80" />
+                <span className="text-xs font-semibold uppercase tracking-widest opacity-70">Painel Administrativo</span>
+              </div>
+              <h1 className="text-xl lg:text-2xl font-bold tracking-tight">
+                Bem-vindo, {profile?.full_name?.split(" ")[0] || "Administrador"}
+              </h1>
+              <p className="text-sm opacity-80 mt-1">
+                {getRoleLabel((roles[0] || "admin") as AppRole)} &middot; Visão geral do sistema acadêmico
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/10 backdrop-blur-sm border border-white/10">
+                <Shield className="h-4 w-4 opacity-70" />
+                <span className="text-xs font-medium">Sistema Seguro</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Stats Grid */}
       {loading ? (
@@ -66,7 +91,7 @@ const Dashboard = () => {
       {/* Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         {/* Recent Requests */}
-        <div className="bg-card rounded-2xl border border-border/50 shadow-sm overflow-hidden animate-fade-in">
+        <div className="bg-card rounded-xl border border-border/50 shadow-sm overflow-hidden animate-fade-in">
           <div className="flex items-center justify-between px-6 py-4 border-b border-border/50">
             <div className="flex items-center gap-2.5">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-warning/10">
@@ -108,7 +133,7 @@ const Dashboard = () => {
         </div>
 
         {/* Active Classes */}
-        <div className="bg-card rounded-2xl border border-border/50 shadow-sm overflow-hidden animate-fade-in">
+        <div className="bg-card rounded-xl border border-border/50 shadow-sm overflow-hidden animate-fade-in">
           <div className="flex items-center justify-between px-6 py-4 border-b border-border/50">
             <div className="flex items-center gap-2.5">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent/10">
@@ -158,14 +183,14 @@ const Dashboard = () => {
             { icon: Users, label: "Novo Aluno", color: "bg-primary/10 text-primary", hoverColor: "hover:bg-primary/15", path: "/alunos" },
             { icon: GraduationCap, label: "Nova Turma", color: "bg-accent/10 text-accent", hoverColor: "hover:bg-accent/15", path: "/turmas" },
             { icon: TrendingUp, label: "Lançar Notas", color: "bg-success/10 text-success", hoverColor: "hover:bg-success/15", path: "/notas" },
-            { icon: FileText, label: "Novo Documento", color: "bg-info/10 text-info", hoverColor: "hover:bg-info/15", path: "/documentos" },
+            { icon: FileText, label: "Documentos", color: "bg-info/10 text-info", hoverColor: "hover:bg-info/15", path: "/documentos" },
           ].map((action) => (
             <button
               key={action.label}
               onClick={() => navigate(action.path)}
-              className={`flex flex-col items-center gap-3 p-5 rounded-2xl border border-border/50 bg-card shadow-sm ${action.hoverColor} hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 group`}
+              className={`flex flex-col items-center gap-3 p-5 rounded-xl border border-border/50 bg-card shadow-sm ${action.hoverColor} hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 group`}
             >
-              <div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${action.color} transition-transform duration-300 group-hover:scale-110`}>
+              <div className={`flex h-12 w-12 items-center justify-center rounded-xl ${action.color} transition-transform duration-300 group-hover:scale-110`}>
                 <action.icon className="h-5 w-5" />
               </div>
               <span className="text-xs font-semibold text-foreground">{action.label}</span>

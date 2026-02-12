@@ -33,7 +33,7 @@ export function StatCard({ title, value, icon: Icon, description, trend, colorCl
           )}
         </div>
         <div className={cn(
-          "flex h-12 w-12 items-center justify-center rounded-2xl transition-transform duration-300 group-hover:scale-110",
+          "flex h-12 w-12 items-center justify-center rounded-xl transition-transform duration-300 group-hover:scale-110",
           colorClass === "text-primary" && "bg-primary/10",
           colorClass === "text-accent" && "bg-accent/10",
           colorClass === "text-warning" && "bg-warning/10",

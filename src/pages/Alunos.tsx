@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { createAuditLog } from "@/lib/audit";
 
 const Alunos = () => {
   const [search, setSearch] = useState("");
@@ -94,6 +95,13 @@ const Alunos = () => {
     if (alunoError) {
       toast({ title: "Erro ao cadastrar aluno", description: alunoError.message, variant: "destructive" });
     } else {
+      await createAuditLog({
+        action: "create",
+        entity_type: "aluno",
+        entity_id: authData.user.id,
+        entity_name: form.full_name,
+        details: { matricula: form.matricula, email: form.email },
+      });
       toast({ title: "Aluno cadastrado com sucesso!" });
       setForm({ email: "", password: "", full_name: "", matricula: "", cpf: "", phone: "", cidade: "", estado: "SP" });
       setDialogOpen(false);
@@ -121,7 +129,7 @@ const Alunos = () => {
                   <Plus className="h-4 w-4" /> Novo Aluno
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-md rounded-2xl">
+              <DialogContent className="max-w-md rounded-xl">
                 <DialogHeader>
                   <DialogTitle className="text-lg">Cadastrar Novo Aluno</DialogTitle>
                 </DialogHeader>
@@ -184,7 +192,7 @@ const Alunos = () => {
       {loading ? (
         <SkeletonTable rows={6} cols={4} />
       ) : filtered.length === 0 ? (
-        <div className="bg-card rounded-2xl border border-border/50 shadow-sm">
+        <div className="bg-card rounded-xl border border-border/50 shadow-sm">
           <EmptyState
             variant={search ? "search" : "default"}
             title={search ? "Nenhum resultado" : "Nenhum aluno cadastrado"}
@@ -199,7 +207,7 @@ const Alunos = () => {
           />
         </div>
       ) : (
-        <div className="bg-card rounded-2xl border border-border/50 shadow-sm overflow-hidden animate-fade-in">
+        <div className="bg-card rounded-xl border border-border/50 shadow-sm overflow-hidden animate-fade-in">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>

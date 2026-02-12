@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { createAuditLog } from "@/lib/audit";
 
 const tipoLabels: Record<string, string> = {
   declaracao: "Declaração", historico: "Histórico Escolar", certificado: "Certificado",
@@ -79,6 +80,12 @@ const Requerimentos = () => {
     if (error) {
       toast({ title: "Erro ao criar requerimento", description: error.message, variant: "destructive" });
     } else {
+      await createAuditLog({
+        action: "create",
+        entity_type: "requerimento",
+        entity_name: form.titulo,
+        details: { tipo: form.tipo },
+      });
       toast({ title: "Requerimento criado!" });
       setForm({ tipo: "declaracao", titulo: "", descricao: "" });
       setDialogOpen(false);
@@ -116,7 +123,7 @@ const Requerimentos = () => {
             <DialogTrigger asChild>
               <Button className="gap-2 rounded-xl shadow-sm"><Plus className="h-4 w-4" /> Novo Requerimento</Button>
             </DialogTrigger>
-            <DialogContent className="max-w-md rounded-2xl">
+            <DialogContent className="max-w-md rounded-xl">
               <DialogHeader><DialogTitle className="text-lg">Novo Requerimento</DialogTitle></DialogHeader>
               <div className="space-y-4 mt-2">
                 <div>
@@ -179,12 +186,12 @@ const Requerimentos = () => {
             {filtered.map((req, index) => (
               <div
                 key={req.id}
-                className="bg-card rounded-2xl border border-border/50 shadow-sm p-6 hover:shadow-lg transition-all duration-300 animate-fade-in group"
+                className="bg-card rounded-xl border border-border/50 shadow-sm p-6 hover:shadow-lg transition-all duration-300 animate-fade-in group"
                 style={{ animationDelay: `${index * 50}ms` }}
               >
                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                   <div className="flex gap-4 flex-1 min-w-0">
-                    <div className={`flex h-11 w-11 items-center justify-center rounded-2xl shrink-0 transition-transform duration-300 group-hover:scale-110 ${tipoColors[req.tipo] || tipoColors.outro}`}>
+                    <div className={`flex h-11 w-11 items-center justify-center rounded-xl shrink-0 transition-transform duration-300 group-hover:scale-110 ${tipoColors[req.tipo] || tipoColors.outro}`}>
                       <ClipboardList className="h-5 w-5" />
                     </div>
                     <div className="flex-1 min-w-0">
