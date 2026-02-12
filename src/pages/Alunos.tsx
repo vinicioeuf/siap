@@ -2,9 +2,12 @@ import { useEffect, useState } from "react";
 import { AppLayout } from "@/components/AppLayout";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
+import { EmptyState } from "@/components/EmptyState";
+import { SearchInput } from "@/components/SearchInput";
+import { SkeletonTable } from "@/components/Skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, Mail, Phone } from "lucide-react";
+import { Plus, Mail, Phone } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
@@ -17,16 +20,9 @@ const Alunos = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
   const { hasRole } = useAuth();
 
-  // Form state
   const [form, setForm] = useState({
-    email: "",
-    password: "",
-    full_name: "",
-    matricula: "",
-    cpf: "",
-    phone: "",
-    cidade: "",
-    estado: "SP",
+    email: "", password: "", full_name: "", matricula: "",
+    cpf: "", phone: "", cidade: "", estado: "SP",
   });
   const [saving, setSaving] = useState(false);
 
@@ -40,7 +36,6 @@ const Alunos = () => {
       .order("created_at", { ascending: false });
 
     if (data && data.length > 0) {
-      // Fetch profiles for each aluno
       const userIds = data.map((a) => a.user_id);
       const { data: profiles } = await supabase
         .from("profiles")
@@ -60,9 +55,7 @@ const Alunos = () => {
     setLoading(false);
   };
 
-  useEffect(() => {
-    fetchAlunos();
-  }, []);
+  useEffect(() => { fetchAlunos(); }, []);
 
   const handleCreate = async () => {
     if (!form.email || !form.password || !form.full_name || !form.matricula) {
@@ -71,7 +64,6 @@ const Alunos = () => {
     }
     setSaving(true);
 
-    // 1. Create auth user
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email: form.email,
       password: form.password,
@@ -87,15 +79,10 @@ const Alunos = () => {
       return;
     }
 
-    // 2. Update profile phone
     if (form.phone) {
-      await supabase
-        .from("profiles")
-        .update({ phone: form.phone })
-        .eq("user_id", authData.user.id);
+      await supabase.from("profiles").update({ phone: form.phone }).eq("user_id", authData.user.id);
     }
 
-    // 3. Create aluno record
     const { error: alunoError } = await supabase.from("alunos").insert({
       user_id: authData.user.id,
       matricula: form.matricula,
@@ -125,56 +112,57 @@ const Alunos = () => {
       <PageHeader
         title="Alunos"
         description="Gerenciamento de alunos matriculados"
+        breadcrumbs={[{ label: "Alunos" }]}
         actions={
           canManage ? (
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
               <DialogTrigger asChild>
-                <Button className="gap-2">
+                <Button className="gap-2 rounded-xl shadow-sm">
                   <Plus className="h-4 w-4" /> Novo Aluno
                 </Button>
               </DialogTrigger>
-              <DialogContent className="max-w-md">
+              <DialogContent className="max-w-md rounded-2xl">
                 <DialogHeader>
-                  <DialogTitle>Cadastrar Novo Aluno</DialogTitle>
+                  <DialogTitle className="text-lg">Cadastrar Novo Aluno</DialogTitle>
                 </DialogHeader>
-                <div className="space-y-3 mt-2">
+                <div className="space-y-4 mt-2">
                   <div>
-                    <label className="text-sm font-medium text-foreground mb-1 block">Nome Completo *</label>
-                    <Input value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} placeholder="Nome do aluno" />
+                    <label className="text-sm font-medium text-foreground mb-1.5 block">Nome Completo *</label>
+                    <Input value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} placeholder="Nome do aluno" className="rounded-xl" />
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-foreground mb-1 block">E-mail *</label>
-                    <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="aluno@email.com" />
+                    <label className="text-sm font-medium text-foreground mb-1.5 block">E-mail *</label>
+                    <Input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="aluno@email.com" className="rounded-xl" />
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-foreground mb-1 block">Senha *</label>
-                    <Input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="Mínimo 6 caracteres" />
+                    <label className="text-sm font-medium text-foreground mb-1.5 block">Senha *</label>
+                    <Input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="Mínimo 6 caracteres" className="rounded-xl" />
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-foreground mb-1 block">Matrícula *</label>
-                    <Input value={form.matricula} onChange={(e) => setForm({ ...form, matricula: e.target.value })} placeholder="Ex: 2024001" />
+                    <label className="text-sm font-medium text-foreground mb-1.5 block">Matrícula *</label>
+                    <Input value={form.matricula} onChange={(e) => setForm({ ...form, matricula: e.target.value })} placeholder="Ex: 2024001" className="rounded-xl" />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="text-sm font-medium text-foreground mb-1 block">CPF</label>
-                      <Input value={form.cpf} onChange={(e) => setForm({ ...form, cpf: e.target.value })} placeholder="000.000.000-00" />
+                      <label className="text-sm font-medium text-foreground mb-1.5 block">CPF</label>
+                      <Input value={form.cpf} onChange={(e) => setForm({ ...form, cpf: e.target.value })} placeholder="000.000.000-00" className="rounded-xl" />
                     </div>
                     <div>
-                      <label className="text-sm font-medium text-foreground mb-1 block">Telefone</label>
-                      <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="(11) 99999-0000" />
+                      <label className="text-sm font-medium text-foreground mb-1.5 block">Telefone</label>
+                      <Input value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} placeholder="(11) 99999-0000" className="rounded-xl" />
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="text-sm font-medium text-foreground mb-1 block">Cidade</label>
-                      <Input value={form.cidade} onChange={(e) => setForm({ ...form, cidade: e.target.value })} placeholder="São Paulo" />
+                      <label className="text-sm font-medium text-foreground mb-1.5 block">Cidade</label>
+                      <Input value={form.cidade} onChange={(e) => setForm({ ...form, cidade: e.target.value })} placeholder="São Paulo" className="rounded-xl" />
                     </div>
                     <div>
-                      <label className="text-sm font-medium text-foreground mb-1 block">Estado</label>
-                      <Input value={form.estado} onChange={(e) => setForm({ ...form, estado: e.target.value })} placeholder="SP" />
+                      <label className="text-sm font-medium text-foreground mb-1.5 block">Estado</label>
+                      <Input value={form.estado} onChange={(e) => setForm({ ...form, estado: e.target.value })} placeholder="SP" className="rounded-xl" />
                     </div>
                   </div>
-                  <Button onClick={handleCreate} disabled={saving} className="w-full">
+                  <Button onClick={handleCreate} disabled={saving} className="w-full rounded-xl h-11 text-sm font-semibold">
                     {saving ? "Salvando..." : "Cadastrar Aluno"}
                   </Button>
                 </div>
@@ -184,72 +172,97 @@ const Alunos = () => {
         }
       />
 
-      <div className="mb-4">
-        <div className="relative max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Buscar por nome ou matrícula..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
-        </div>
+      <div className="mb-6">
+        <SearchInput
+          placeholder="Buscar por nome ou matrícula..."
+          value={search}
+          onChange={setSearch}
+          className="max-w-sm"
+        />
       </div>
 
-      <div className="bg-card rounded-xl border border-border/50 shadow-sm overflow-hidden animate-fade-in">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-border/50 bg-muted/30">
-                <th className="text-left text-xs font-semibold text-muted-foreground px-4 py-3">Aluno</th>
-                <th className="text-left text-xs font-semibold text-muted-foreground px-4 py-3 hidden md:table-cell">Matrícula</th>
-                <th className="text-left text-xs font-semibold text-muted-foreground px-4 py-3 hidden lg:table-cell">Contato</th>
-                <th className="text-left text-xs font-semibold text-muted-foreground px-4 py-3">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border/50">
-              {filtered.map((aluno) => {
-                const name = aluno.profile?.full_name || "—";
-                const initials = name.split(" ").map((n: string) => n[0]).join("").slice(0, 2);
-                return (
-                  <tr key={aluno.id} className="hover:bg-muted/20 transition-colors cursor-pointer">
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary text-xs font-bold shrink-0">
-                          {initials}
-                        </div>
-                        <div>
-                          <p className="text-sm font-medium text-foreground">{name}</p>
-                          <p className="text-xs text-muted-foreground">{aluno.profile?.email}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 hidden md:table-cell">
-                      <span className="text-sm text-foreground font-mono">{aluno.matricula}</span>
-                    </td>
-                    <td className="px-4 py-3 hidden lg:table-cell">
-                      <div className="flex flex-col gap-0.5">
-                        <span className="text-xs text-muted-foreground flex items-center gap-1">
-                          <Mail className="h-3 w-3" /> {aluno.profile?.email || "—"}
-                        </span>
-                        {aluno.profile?.phone && (
-                          <span className="text-xs text-muted-foreground flex items-center gap-1">
-                            <Phone className="h-3 w-3" /> {aluno.profile.phone}
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <StatusBadge status={aluno.status || "ativo"} />
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+      {loading ? (
+        <SkeletonTable rows={6} cols={4} />
+      ) : filtered.length === 0 ? (
+        <div className="bg-card rounded-2xl border border-border/50 shadow-sm">
+          <EmptyState
+            variant={search ? "search" : "default"}
+            title={search ? "Nenhum resultado" : "Nenhum aluno cadastrado"}
+            description={search ? `Nenhum aluno encontrado para "${search}"` : "Comece cadastrando um novo aluno no sistema"}
+            action={
+              canManage && !search ? (
+                <Button onClick={() => setDialogOpen(true)} className="gap-2 rounded-xl">
+                  <Plus className="h-4 w-4" /> Cadastrar Aluno
+                </Button>
+              ) : undefined
+            }
+          />
         </div>
-        {!loading && filtered.length === 0 && (
-          <div className="text-center py-12 text-muted-foreground text-sm">Nenhum aluno encontrado.</div>
-        )}
-        {loading && (
-          <div className="text-center py-12 text-muted-foreground text-sm">Carregando...</div>
-        )}
-      </div>
+      ) : (
+        <div className="bg-card rounded-2xl border border-border/50 shadow-sm overflow-hidden animate-fade-in">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-border/50 bg-muted/30">
+                  <th className="text-left text-xs font-semibold text-muted-foreground px-6 py-4 uppercase tracking-wider">Aluno</th>
+                  <th className="text-left text-xs font-semibold text-muted-foreground px-6 py-4 hidden md:table-cell uppercase tracking-wider">Matrícula</th>
+                  <th className="text-left text-xs font-semibold text-muted-foreground px-6 py-4 hidden lg:table-cell uppercase tracking-wider">Contato</th>
+                  <th className="text-left text-xs font-semibold text-muted-foreground px-6 py-4 uppercase tracking-wider">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border/50">
+                {filtered.map((aluno, index) => {
+                  const name = aluno.profile?.full_name || "—";
+                  const initials = name.split(" ").map((n: string) => n[0]).join("").slice(0, 2);
+                  return (
+                    <tr
+                      key={aluno.id}
+                      className="hover:bg-muted/20 transition-colors cursor-pointer group"
+                      style={{ animationDelay: `${index * 30}ms` }}
+                    >
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary text-xs font-bold shrink-0 transition-transform duration-200 group-hover:scale-105">
+                            {initials}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-semibold text-foreground truncate">{name}</p>
+                            <p className="text-xs text-muted-foreground truncate">{aluno.profile?.email}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 hidden md:table-cell">
+                        <span className="text-sm text-foreground font-mono bg-muted/50 px-2 py-0.5 rounded-md">{aluno.matricula}</span>
+                      </td>
+                      <td className="px-6 py-4 hidden lg:table-cell">
+                        <div className="flex flex-col gap-1">
+                          <span className="text-xs text-muted-foreground flex items-center gap-1.5">
+                            <Mail className="h-3 w-3" /> {aluno.profile?.email || "—"}
+                          </span>
+                          {aluno.profile?.phone && (
+                            <span className="text-xs text-muted-foreground flex items-center gap-1.5">
+                              <Phone className="h-3 w-3" /> {aluno.profile.phone}
+                            </span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <StatusBadge status={aluno.status || "ativo"} />
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          {/* Footer count */}
+          <div className="px-6 py-3 border-t border-border/50 bg-muted/20">
+            <p className="text-xs text-muted-foreground">
+              {filtered.length} {filtered.length === 1 ? "aluno encontrado" : "alunos encontrados"}
+            </p>
+          </div>
+        </div>
+      )}
     </AppLayout>
   );
 };
