@@ -73,6 +73,7 @@ const ROLE_PERMISSIONS: Record<AppRole, Permission[]> = {
     "requerimentos.view", "requerimentos.view_own", "requerimentos.create", "requerimentos.respond",
     "audit.view",
     "dashboard.admin",
+    "dashboard.aluno",
   ],
   secretaria: [
     "cursos.view", "cursos.create", "cursos.edit",

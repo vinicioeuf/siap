@@ -38,50 +38,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [roles, setRoles] = useState<AppRole[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchProfile = async (userId: string) => {
-    const { data } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("user_id", userId)
-      .single();
-    setProfile(data);
-  };
-
-  const fetchRoles = async (userId: string) => {
-    const { data } = await supabase.rpc("get_user_roles", { _user_id: userId });
-    setRoles((data as AppRole[]) || []);
+  const loadUserData = async (userId: string) => {
+    try {
+      const [profileRes, rolesRes] = await Promise.all([
+        supabase.from("profiles").select("*").eq("user_id", userId).single(),
+        supabase.rpc("get_user_roles", { _user_id: userId }),
+      ]);
+      setProfile(profileRes.data);
+      setRoles((rolesRes.data as AppRole[]) || []);
+    } catch (err) {
+      console.error("Error loading user data:", err);
+      setProfile(null);
+      setRoles([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      (_event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
 
         if (session?.user) {
-          await Promise.all([
-            fetchProfile(session.user.id),
-            fetchRoles(session.user.id),
-          ]);
+          // Set loading true while we fetch roles — prevents premature redirect
+          setLoading(true);
+          // Don't await inside the callback — it causes a deadlock in supabase-js
+          loadUserData(session.user.id);
         } else {
           setProfile(null);
           setRoles([]);
+          setLoading(false);
         }
-        setLoading(false);
       }
     );
-
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      setSession(session);
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        await Promise.all([
-          fetchProfile(session.user.id),
-          fetchRoles(session.user.id),
-        ]);
-      }
-      setLoading(false);
-    });
 
     return () => subscription.unsubscribe();
   }, []);
