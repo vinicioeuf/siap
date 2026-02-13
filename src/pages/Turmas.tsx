@@ -24,7 +24,7 @@ const Turmas = () => {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [cursoDialogOpen, setCursoDialogOpen] = useState(false);
-  const { hasRole, roles } = useAuth();
+  const { hasRole, roles, institutionId } = useAuth();
   const canManage = hasRole("admin") || hasRole("secretaria");
   const canDelete = hasPermission(roles as AppRole[], "cursos.delete");
 
@@ -71,6 +71,7 @@ const Turmas = () => {
       curso_id: form.curso_id || null,
       turno: form.turno,
       max_alunos: parseInt(form.max_alunos) || 40,
+      institution_id: institutionId,
     });
     if (error) {
       toast({ title: "Erro ao criar turma", description: error.message, variant: "destructive" });
@@ -90,6 +91,7 @@ const Turmas = () => {
       nome: cursoForm.nome,
       descricao: cursoForm.descricao || null,
       duracao_semestres: parseInt(cursoForm.duracao_semestres) || 1,
+      institution_id: institutionId,
     }).select().single();
     if (error) {
       toast({ title: "Erro ao criar curso", description: error.message, variant: "destructive" });

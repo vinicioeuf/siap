@@ -25,7 +25,7 @@ const Notas = () => {
   const [search, setSearch] = useState("");
   const [notas, setNotas] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const { hasRole, user, roles } = useAuth();
+  const { hasRole, user, roles, institutionId } = useAuth();
 
   // Permission checks
   const isAdmin = hasRole("admin");
@@ -245,6 +245,7 @@ const Notas = () => {
         nota4: form.nota4 ? parseFloat(form.nota4) : null,
         observacao: form.observacao || null,
         professor_id: user?.id || null,
+        institution_id: institutionId,
       };
 
       if (editingNota) {

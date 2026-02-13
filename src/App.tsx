@@ -17,14 +17,19 @@ import Usuarios from "./pages/Usuarios";
 import PainelAluno from "./pages/PainelAluno";
 import Auditoria from "./pages/Auditoria";
 import Disciplinas from "./pages/Disciplinas";
+import Institutions from "./pages/Institutions";
+import Platform from "./pages/Platform";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
 function SmartRedirect() {
-  const { roles, loading } = useAuth();
+  const { roles, loading, isSuperAdmin } = useAuth();
   if (loading) return null;
   const appRoles = roles as AppRole[];
+  if (isSuperAdmin) {
+    return <Navigate to="/platform" replace />;
+  }
   if (hasPermission(appRoles, "dashboard.admin")) {
     return <Navigate to="/dashboard" replace />;
   }
@@ -51,6 +56,8 @@ const App = () => (
             <Route path="/documentos" element={<ProtectedRoute requiredPermission="documentos.view"><Documentos /></ProtectedRoute>} />
             <Route path="/requerimentos" element={<ProtectedRoute requiredPermission="requerimentos.view"><Requerimentos /></ProtectedRoute>} />
             <Route path="/auditoria" element={<ProtectedRoute requiredPermission="audit.view"><Auditoria /></ProtectedRoute>} />
+            <Route path="/institutions" element={<ProtectedRoute requiredPermission="institutions.view"><Institutions /></ProtectedRoute>} />
+            <Route path="/platform" element={<ProtectedRoute requiredPermission="platform.view"><Platform /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

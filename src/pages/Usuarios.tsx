@@ -13,7 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { getRoleLabel, getRoleColor, type AppRole } from "@/lib/permissions";
+import { getRoleLabel, getRoleColor, assignableRoles, type AppRole, hasPermission } from "@/lib/permissions";
 import { createAuditLog } from "@/lib/audit";
 import { adminCreateUser } from "@/lib/admin-api";
 import { maskPhone, unmask, formatPhone } from "@/lib/masks";
@@ -38,8 +38,8 @@ const Usuarios = () => {
   const [users, setUsers] = useState<UserRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const { hasRole } = useAuth();
-  const canManage = hasRole("admin");
+  const { hasRole, institutionId, isSuperAdmin, roles } = useAuth();
+  const canManage = hasPermission(roles as AppRole[], "users.create");
 
   const [form, setForm] = useState({
     email: "", password: "", full_name: "", phone: "",
@@ -104,13 +104,13 @@ const Usuarios = () => {
     setSaving(true);
 
     try {
-      // Use admin API (Edge Function or fallback)
       const { user, error } = await adminCreateUser({
         email: form.email,
         password: form.password,
         full_name: form.full_name,
         role: form.role,
         phone: unmask(form.phone) || undefined,
+        institution_id: institutionId || undefined,
       });
 
       if (error || !user) {
@@ -124,6 +124,7 @@ const Usuarios = () => {
         await supabase.from("alunos").insert({
           user_id: user.id,
           matricula,
+          institution_id: institutionId,
         });
       }
 
@@ -219,11 +220,9 @@ const Usuarios = () => {
                   <div>
                     <label className="text-sm font-medium text-foreground mb-1.5 block">Papel no Sistema *</label>
                     <select className="flex h-10 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/30" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value as AppRole })}>
-                      <option value="admin">Administrador</option>
-                      <option value="secretaria">Técnico Administrativo</option>
-                      <option value="coordenador">Coordenador</option>
-                      <option value="professor">Professor</option>
-                      <option value="aluno">Aluno</option>
+                      {assignableRoles.map((r) => (
+                        <option key={r} value={r}>{getRoleLabel(r)}</option>
+                      ))}
                     </select>
                   </div>
                   <div className="p-3 bg-info/5 border border-info/20 rounded-xl">

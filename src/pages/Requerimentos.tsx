@@ -34,7 +34,7 @@ const Requerimentos = () => {
   const [requerimentos, setRequerimentos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const { user, hasRole } = useAuth();
+  const { user, hasRole, institutionId } = useAuth();
   const canRespond = hasRole("admin") || hasRole("secretaria");
 
   const [form, setForm] = useState({ tipo: "declaracao", titulo: "", descricao: "" });
@@ -76,6 +76,7 @@ const Requerimentos = () => {
       titulo: form.titulo,
       descricao: form.descricao || null,
       solicitante_id: user!.id,
+      institution_id: institutionId,
     });
     if (error) {
       toast({ title: "Erro ao criar requerimento", description: error.message, variant: "destructive" });

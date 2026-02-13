@@ -1,6 +1,6 @@
 import { Navigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { School, ShieldAlert } from "lucide-react";
+import { School, ShieldAlert, Building2 } from "lucide-react";
 import { hasPermission, type Permission, type AppRole } from "@/lib/permissions";
 
 interface ProtectedRouteProps {
@@ -9,7 +9,7 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children, requiredPermission }: ProtectedRouteProps) {
-  const { user, loading, roles } = useAuth();
+  const { user, loading, roles, institution, isSuperAdmin } = useAuth();
 
   if (loading) {
     return (
@@ -32,6 +32,27 @@ export function ProtectedRoute({ children, requiredPermission }: ProtectedRouteP
   }
 
   if (!user) return <Navigate to="/login" replace />;
+
+  // Institution active check (skip for super_admin)
+  if (!isSuperAdmin && institution && !institution.is_active) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-4 animate-fade-in text-center max-w-sm">
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-warning/10">
+            <Building2 className="h-7 w-7 text-warning" />
+          </div>
+          <h2 className="text-lg font-bold text-foreground">Instituição Inativa</h2>
+          <p className="text-sm text-muted-foreground">
+            A instituição associada à sua conta está temporariamente inativa.
+            Entre em contato com o suporte para mais informações.
+          </p>
+          <a href="/login" className="text-sm text-primary hover:text-primary/80 font-medium">
+            Voltar ao login
+          </a>
+        </div>
+      </div>
+    );
+  }
 
   // Permission check
   if (requiredPermission && !hasPermission(roles as AppRole[], requiredPermission)) {

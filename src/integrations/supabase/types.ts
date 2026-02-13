@@ -7,13 +7,184 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "14.1"
-  }
   public: {
     Tables: {
+      institutions: {
+        Row: {
+          id: string
+          name: string
+          slug: string
+          cnpj: string | null
+          email: string | null
+          phone: string | null
+          logo_url: string | null
+          address: string | null
+          city: string | null
+          state: string | null
+          zip_code: string | null
+          website: string | null
+          plan_id: string | null
+          subscription_status: string | null
+          trial_ends_at: string | null
+          subscription_ends_at: string | null
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+          settings: Json
+          is_active: boolean | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          slug: string
+          cnpj?: string | null
+          email?: string | null
+          phone?: string | null
+          logo_url?: string | null
+          address?: string | null
+          city?: string | null
+          state?: string | null
+          zip_code?: string | null
+          website?: string | null
+          plan_id?: string | null
+          subscription_status?: string | null
+          trial_ends_at?: string | null
+          subscription_ends_at?: string | null
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          settings?: Json
+          is_active?: boolean | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          slug?: string
+          cnpj?: string | null
+          email?: string | null
+          phone?: string | null
+          logo_url?: string | null
+          address?: string | null
+          city?: string | null
+          state?: string | null
+          zip_code?: string | null
+          website?: string | null
+          plan_id?: string | null
+          subscription_status?: string | null
+          trial_ends_at?: string | null
+          subscription_ends_at?: string | null
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          settings?: Json
+          is_active?: boolean | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "institutions_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plans: {
+        Row: {
+          id: string
+          name: string
+          slug: string
+          description: string | null
+          price_monthly: number | null
+          price_yearly: number | null
+          max_users: number | null
+          max_turmas: number | null
+          max_cursos: number | null
+          max_storage_mb: number | null
+          features: Json
+          is_active: boolean | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          slug: string
+          description?: string | null
+          price_monthly?: number | null
+          price_yearly?: number | null
+          max_users?: number | null
+          max_turmas?: number | null
+          max_cursos?: number | null
+          max_storage_mb?: number | null
+          features?: Json
+          is_active?: boolean | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          slug?: string
+          description?: string | null
+          price_monthly?: number | null
+          price_yearly?: number | null
+          max_users?: number | null
+          max_turmas?: number | null
+          max_cursos?: number | null
+          max_storage_mb?: number | null
+          features?: Json
+          is_active?: boolean | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      subscriptions: {
+        Row: {
+          id: string
+          institution_id: string
+          plan_id: string
+          status: string | null
+          current_period_start: string | null
+          current_period_end: string | null
+          stripe_subscription_id: string | null
+          stripe_invoice_id: string | null
+          amount: number | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          institution_id: string
+          plan_id: string
+          status?: string | null
+          current_period_start?: string | null
+          current_period_end?: string | null
+          stripe_subscription_id?: string | null
+          stripe_invoice_id?: string | null
+          amount?: number | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          institution_id?: string
+          plan_id?: string
+          status?: string | null
+          current_period_start?: string | null
+          current_period_end?: string | null
+          stripe_subscription_id?: string | null
+          stripe_invoice_id?: string | null
+          amount?: number | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       alunos: {
         Row: {
           cep: string | null
@@ -22,9 +193,12 @@ export type Database = {
           created_at: string
           data_ingresso: string | null
           data_nascimento: string | null
+          deleted_at: string | null
+          deleted_by: string | null
           endereco: string | null
           estado: string | null
           id: string
+          institution_id: string | null
           matricula: string
           responsavel_nome: string | null
           responsavel_telefone: string | null
@@ -39,9 +213,12 @@ export type Database = {
           created_at?: string
           data_ingresso?: string | null
           data_nascimento?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           endereco?: string | null
           estado?: string | null
           id?: string
+          institution_id?: string | null
           matricula: string
           responsavel_nome?: string | null
           responsavel_telefone?: string | null
@@ -56,9 +233,12 @@ export type Database = {
           created_at?: string
           data_ingresso?: string | null
           data_nascimento?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           endereco?: string | null
           estado?: string | null
           id?: string
+          institution_id?: string | null
           matricula?: string
           responsavel_nome?: string | null
           responsavel_telefone?: string | null
@@ -68,31 +248,82 @@ export type Database = {
         }
         Relationships: []
       }
+      audit_logs: {
+        Row: {
+          id: string
+          user_id: string | null
+          user_name: string | null
+          action: string
+          entity_type: string
+          entity_id: string | null
+          entity_name: string | null
+          details: Json
+          ip_address: string | null
+          institution_id: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id?: string | null
+          user_name?: string | null
+          action: string
+          entity_type: string
+          entity_id?: string | null
+          entity_name?: string | null
+          details?: Json
+          ip_address?: string | null
+          institution_id?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string | null
+          user_name?: string | null
+          action?: string
+          entity_type?: string
+          entity_id?: string | null
+          entity_name?: string | null
+          details?: Json
+          ip_address?: string | null
+          institution_id?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
       cursos: {
         Row: {
           ativo: boolean | null
           created_at: string
+          deleted_at: string | null
+          deleted_by: string | null
           descricao: string | null
           duracao_semestres: number | null
           id: string
+          institution_id: string | null
           nome: string
           updated_at: string
         }
         Insert: {
           ativo?: boolean | null
           created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           descricao?: string | null
           duracao_semestres?: number | null
           id?: string
+          institution_id?: string | null
           nome: string
           updated_at?: string
         }
         Update: {
           ativo?: boolean | null
           created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           descricao?: string | null
           duracao_semestres?: number | null
           id?: string
+          institution_id?: string | null
           nome?: string
           updated_at?: string
         }
@@ -105,7 +336,10 @@ export type Database = {
           codigo: string | null
           created_at: string
           curso_id: string | null
+          deleted_at: string | null
+          deleted_by: string | null
           id: string
+          institution_id: string | null
           nome: string
           professor_id: string | null
           updated_at: string
@@ -116,7 +350,10 @@ export type Database = {
           codigo?: string | null
           created_at?: string
           curso_id?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           id?: string
+          institution_id?: string | null
           nome: string
           professor_id?: string | null
           updated_at?: string
@@ -127,20 +364,15 @@ export type Database = {
           codigo?: string | null
           created_at?: string
           curso_id?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           id?: string
+          institution_id?: string | null
           nome?: string
           professor_id?: string | null
           updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "disciplinas_curso_id_fkey"
-            columns: ["curso_id"]
-            isOneToOne: false
-            referencedRelation: "cursos"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       documentos: {
         Row: {
@@ -153,6 +385,7 @@ export type Database = {
           curso_id: string | null
           descricao: string | null
           id: string
+          institution_id: string | null
           titulo: string
           turma_id: string | null
           updated_at: string
@@ -168,6 +401,7 @@ export type Database = {
           curso_id?: string | null
           descricao?: string | null
           id?: string
+          institution_id?: string | null
           titulo: string
           turma_id?: string | null
           updated_at?: string
@@ -183,34 +417,13 @@ export type Database = {
           curso_id?: string | null
           descricao?: string | null
           id?: string
+          institution_id?: string | null
           titulo?: string
           turma_id?: string | null
           updated_at?: string
           uploaded_by?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "documentos_aluno_id_fkey"
-            columns: ["aluno_id"]
-            isOneToOne: false
-            referencedRelation: "alunos"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "documentos_curso_id_fkey"
-            columns: ["curso_id"]
-            isOneToOne: false
-            referencedRelation: "cursos"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "documentos_turma_id_fkey"
-            columns: ["turma_id"]
-            isOneToOne: false
-            referencedRelation: "turmas"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       frequencia: {
         Row: {
@@ -219,6 +432,7 @@ export type Database = {
           data: string
           disciplina_id: string
           id: string
+          institution_id: string | null
           justificativa: string | null
           presente: boolean | null
         }
@@ -228,6 +442,7 @@ export type Database = {
           data: string
           disciplina_id: string
           id?: string
+          institution_id?: string | null
           justificativa?: string | null
           presente?: boolean | null
         }
@@ -237,25 +452,95 @@ export type Database = {
           data?: string
           disciplina_id?: string
           id?: string
+          institution_id?: string | null
           justificativa?: string | null
           presente?: boolean | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "frequencia_aluno_id_fkey"
-            columns: ["aluno_id"]
-            isOneToOne: false
-            referencedRelation: "alunos"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "frequencia_disciplina_id_fkey"
-            columns: ["disciplina_id"]
-            isOneToOne: false
-            referencedRelation: "disciplinas"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
+      }
+      generated_documents: {
+        Row: {
+          id: string
+          tipo: string
+          aluno_id: string | null
+          turma_id: string | null
+          disciplina_id: string | null
+          numero_validacao: string
+          generated_by: string
+          generated_by_name: string | null
+          assinatura_digital: string | null
+          metadata: Json
+          institution_id: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          tipo: string
+          aluno_id?: string | null
+          turma_id?: string | null
+          disciplina_id?: string | null
+          numero_validacao: string
+          generated_by: string
+          generated_by_name?: string | null
+          assinatura_digital?: string | null
+          metadata?: Json
+          institution_id?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          tipo?: string
+          aluno_id?: string | null
+          turma_id?: string | null
+          disciplina_id?: string | null
+          numero_validacao?: string
+          generated_by?: string
+          generated_by_name?: string | null
+          assinatura_digital?: string | null
+          metadata?: Json
+          institution_id?: string | null
+          created_at?: string
+        }
+        Relationships: []
+      }
+      horarios: {
+        Row: {
+          id: string
+          turma_id: string
+          disciplina_id: string
+          dia_semana: number
+          hora_inicio: string
+          hora_fim: string
+          sala: string | null
+          institution_id: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          turma_id: string
+          disciplina_id: string
+          dia_semana: number
+          hora_inicio: string
+          hora_fim: string
+          sala?: string | null
+          institution_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          turma_id?: string
+          disciplina_id?: string
+          dia_semana?: number
+          hora_inicio?: string
+          hora_fim?: string
+          sala?: string | null
+          institution_id?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       matriculas: {
         Row: {
@@ -263,6 +548,7 @@ export type Database = {
           created_at: string
           data_matricula: string | null
           id: string
+          institution_id: string | null
           status: string | null
           turma_id: string
         }
@@ -271,6 +557,7 @@ export type Database = {
           created_at?: string
           data_matricula?: string | null
           id?: string
+          institution_id?: string | null
           status?: string | null
           turma_id: string
         }
@@ -279,25 +566,11 @@ export type Database = {
           created_at?: string
           data_matricula?: string | null
           id?: string
+          institution_id?: string | null
           status?: string | null
           turma_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "matriculas_aluno_id_fkey"
-            columns: ["aluno_id"]
-            isOneToOne: false
-            referencedRelation: "alunos"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "matriculas_turma_id_fkey"
-            columns: ["turma_id"]
-            isOneToOne: false
-            referencedRelation: "turmas"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       notas: {
         Row: {
@@ -305,6 +578,7 @@ export type Database = {
           created_at: string
           disciplina_id: string
           id: string
+          institution_id: string | null
           media: number | null
           nota1: number | null
           nota2: number | null
@@ -322,6 +596,7 @@ export type Database = {
           created_at?: string
           disciplina_id: string
           id?: string
+          institution_id?: string | null
           media?: number | null
           nota1?: number | null
           nota2?: number | null
@@ -339,6 +614,7 @@ export type Database = {
           created_at?: string
           disciplina_id?: string
           id?: string
+          institution_id?: string | null
           media?: number | null
           nota1?: number | null
           nota2?: number | null
@@ -351,29 +627,7 @@ export type Database = {
           turma_id?: string | null
           updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "notas_aluno_id_fkey"
-            columns: ["aluno_id"]
-            isOneToOne: false
-            referencedRelation: "alunos"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "notas_disciplina_id_fkey"
-            columns: ["disciplina_id"]
-            isOneToOne: false
-            referencedRelation: "disciplinas"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "notas_turma_id_fkey"
-            columns: ["turma_id"]
-            isOneToOne: false
-            referencedRelation: "turmas"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       professor_disciplinas: {
         Row: {
@@ -384,6 +638,7 @@ export type Database = {
           ano: number | null
           semestre: number | null
           ativo: boolean | null
+          institution_id: string | null
           created_at: string
         }
         Insert: {
@@ -394,6 +649,7 @@ export type Database = {
           ano?: number | null
           semestre?: number | null
           ativo?: boolean | null
+          institution_id?: string | null
           created_at?: string
         }
         Update: {
@@ -404,60 +660,34 @@ export type Database = {
           ano?: number | null
           semestre?: number | null
           ativo?: boolean | null
+          institution_id?: string | null
           created_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "professor_disciplinas_disciplina_id_fkey"
-            columns: ["disciplina_id"]
-            isOneToOne: false
-            referencedRelation: "disciplinas"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "professor_disciplinas_turma_id_fkey"
-            columns: ["turma_id"]
-            isOneToOne: false
-            referencedRelation: "turmas"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       turma_disciplinas: {
         Row: {
           id: string
           turma_id: string
           disciplina_id: string
+          institution_id: string | null
           created_at: string
         }
         Insert: {
           id?: string
           turma_id: string
           disciplina_id: string
+          institution_id?: string | null
           created_at?: string
         }
         Update: {
           id?: string
           turma_id?: string
           disciplina_id?: string
+          institution_id?: string | null
           created_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "turma_disciplinas_turma_id_fkey"
-            columns: ["turma_id"]
-            isOneToOne: false
-            referencedRelation: "turmas"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "turma_disciplinas_disciplina_id_fkey"
-            columns: ["disciplina_id"]
-            isOneToOne: false
-            referencedRelation: "disciplinas"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       profiles: {
         Row: {
@@ -466,6 +696,7 @@ export type Database = {
           email: string
           full_name: string
           id: string
+          institution_id: string | null
           phone: string | null
           updated_at: string
           user_id: string
@@ -476,6 +707,7 @@ export type Database = {
           email?: string
           full_name?: string
           id?: string
+          institution_id?: string | null
           phone?: string | null
           updated_at?: string
           user_id: string
@@ -486,6 +718,7 @@ export type Database = {
           email?: string
           full_name?: string
           id?: string
+          institution_id?: string | null
           phone?: string | null
           updated_at?: string
           user_id?: string
@@ -498,6 +731,7 @@ export type Database = {
           created_at: string
           descricao: string | null
           id: string
+          institution_id: string | null
           respondido_em: string | null
           respondido_por: string | null
           resposta: string | null
@@ -513,6 +747,7 @@ export type Database = {
           created_at?: string
           descricao?: string | null
           id?: string
+          institution_id?: string | null
           respondido_em?: string | null
           respondido_por?: string | null
           resposta?: string | null
@@ -528,6 +763,7 @@ export type Database = {
           created_at?: string
           descricao?: string | null
           id?: string
+          institution_id?: string | null
           respondido_em?: string | null
           respondido_por?: string | null
           resposta?: string | null
@@ -547,7 +783,10 @@ export type Database = {
           codigo: string | null
           created_at: string
           curso_id: string | null
+          deleted_at: string | null
+          deleted_by: string | null
           id: string
+          institution_id: string | null
           max_alunos: number | null
           nome: string
           semestre: number | null
@@ -560,7 +799,10 @@ export type Database = {
           codigo?: string | null
           created_at?: string
           curso_id?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           id?: string
+          institution_id?: string | null
           max_alunos?: number | null
           nome: string
           semestre?: number | null
@@ -573,39 +815,37 @@ export type Database = {
           codigo?: string | null
           created_at?: string
           curso_id?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           id?: string
+          institution_id?: string | null
           max_alunos?: number | null
           nome?: string
           semestre?: number | null
           turno?: string | null
           updated_at?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "turmas_curso_id_fkey"
-            columns: ["curso_id"]
-            isOneToOne: false
-            referencedRelation: "cursos"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       user_roles: {
         Row: {
           created_at: string
           id: string
+          institution_id: string | null
           role: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
         Insert: {
           created_at?: string
           id?: string
+          institution_id?: string | null
           role: Database["public"]["Enums"]["app_role"]
           user_id: string
         }
         Update: {
           created_at?: string
           id?: string
+          institution_id?: string | null
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
         }
@@ -616,13 +856,44 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_institution_limit: {
+        Args: { _institution_id: string; _resource: string }
+        Returns: Json
+      }
+      get_all_institutions: {
+        Args: Record<string, never>
+        Returns: {
+          id: string
+          name: string
+          slug: string
+          cnpj: string
+          plan_name: string
+          subscription_status: string
+          total_users: number
+          total_alunos: number
+          is_active: boolean
+          created_at: string
+        }[]
+      }
       get_alunos_by_turma: {
         Args: { _turma_id: string }
         Returns: { aluno_id: string; aluno_nome: string; matricula: string }[]
       }
+      get_institution_stats: {
+        Args: { _institution_id: string }
+        Returns: Json
+      }
+      get_platform_stats: {
+        Args: Record<string, never>
+        Returns: Json
+      }
       get_professor_disciplinas: {
         Args: { _professor_id: string }
         Returns: { disciplina_id: string; disciplina_nome: string; turma_id: string; turma_nome: string; curso_nome: string }[]
+      }
+      get_user_institution_id: {
+        Args: Record<string, never>
+        Returns: string
       }
       get_user_roles: {
         Args: { _user_id: string }
@@ -635,9 +906,17 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_super_admin: {
+        Args: Record<string, never>
+        Returns: boolean
+      }
+      is_same_institution: {
+        Args: { _institution_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
-      app_role: "admin" | "secretaria" | "professor" | "aluno" | "coordenador"
+      app_role: "admin" | "secretaria" | "professor" | "aluno" | "coordenador" | "super_admin" | "tecnico"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -645,25 +924,23 @@ export type Database = {
   }
 }
 
-type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
-
-type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
+type DefaultSchema = Database[Extract<keyof Database, "public">]
 
 export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
-    | { schema: keyof DatabaseWithoutInternals },
+    | { schema: keyof Database },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
+    schema: keyof Database
   }
-    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    ? keyof (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
     : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
+  schema: keyof Database
 }
-  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
-      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+  ? (Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      Database[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
       Row: infer R
     }
     ? R
@@ -681,16 +958,16 @@ export type Tables<
 export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
-    | { schema: keyof DatabaseWithoutInternals },
+    | { schema: keyof Database },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
+    schema: keyof Database
   }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
+  schema: keyof Database
 }
-  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Insert: infer I
     }
     ? I
@@ -706,16 +983,16 @@ export type TablesInsert<
 export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
-    | { schema: keyof DatabaseWithoutInternals },
+    | { schema: keyof Database },
   TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
+    schema: keyof Database
   }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    ? keyof Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
     : never = never,
 > = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
+  schema: keyof Database
 }
-  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+  ? Database[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
       Update: infer U
     }
     ? U
@@ -731,41 +1008,24 @@ export type TablesUpdate<
 export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
-    | { schema: keyof DatabaseWithoutInternals },
+    | { schema: keyof Database },
   EnumName extends DefaultSchemaEnumNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
+    schema: keyof Database
   }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    ? keyof Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
     : never = never,
 > = DefaultSchemaEnumNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
+  schema: keyof Database
 }
-  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  ? Database[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
   : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
     ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
-    : never
-
-export type CompositeTypes<
-  PublicCompositeTypeNameOrOptions extends
-    | keyof DefaultSchema["CompositeTypes"]
-    | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals
-  }
-    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
-> = PublicCompositeTypeNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals
-}
-  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
-  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
-    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
     : never
 
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "secretaria", "professor", "aluno", "coordenador"],
+      app_role: ["admin", "secretaria", "professor", "aluno", "coordenador", "super_admin", "tecnico"],
     },
   },
 } as const

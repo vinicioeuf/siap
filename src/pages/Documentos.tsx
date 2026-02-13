@@ -39,7 +39,7 @@ const Documentos = () => {
   const [documentos, setDocumentos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const { user, hasRole, roles, profile } = useAuth();
+  const { user, hasRole, roles, profile, institutionId } = useAuth();
   const canManage = hasRole("admin") || hasRole("secretaria");
   const canGenerate = hasPermission(roles as AppRole[], "documentos.generate");
 
@@ -97,6 +97,7 @@ const Documentos = () => {
       arquivo_nome: file.name,
       arquivo_tipo: file.type,
       uploaded_by: user!.id,
+      institution_id: institutionId,
     });
 
     if (error) {
@@ -204,6 +205,7 @@ const Documentos = () => {
       numero_validacao: validationCode,
       generated_by: user!.id,
       generated_by_name: signedBy,
+      institution_id: institutionId,
     });
 
     await createAuditLog({

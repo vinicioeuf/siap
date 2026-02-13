@@ -41,7 +41,7 @@ function SystemClock() {
 export function AppLayout({ children }: AppLayoutProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const isMobile = useIsMobile();
-  const { profile, roles } = useAuth();
+  const { profile, roles, institution } = useAuth();
 
   const displayName = profile?.full_name || profile?.email || "Usuário";
   const initials = displayName
@@ -85,7 +85,7 @@ export function AppLayout({ children }: AppLayoutProps) {
           <header className="institutional-header sticky top-0 z-30 flex items-center justify-between px-6 lg:px-8 py-2.5 no-print">
             <SystemClock />
             <div className="flex items-center gap-4">
-              <span className="version-label">SIAP v2.0</span>
+              <span className="version-label">{institution?.name || "SIAP"} v2.0</span>
               <div className="h-4 w-px bg-border" />
               <button className="flex items-center justify-center h-8 w-8 rounded-lg bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors relative">
                 <Bell className="h-4 w-4" />

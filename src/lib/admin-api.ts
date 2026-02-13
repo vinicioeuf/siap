@@ -12,6 +12,7 @@ interface CreateUserParams {
   full_name: string;
   role?: string;
   phone?: string;
+  institution_id?: string;
 }
 
 interface CreateUserResult {
@@ -70,6 +71,7 @@ async function fallbackSignUp(params: CreateUserParams): Promise<CreateUserResul
       data: {
         full_name: params.full_name,
         role: params.role || 'aluno',
+        institution_id: params.institution_id || undefined,
       },
     },
   });
