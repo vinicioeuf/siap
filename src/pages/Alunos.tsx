@@ -14,6 +14,7 @@ import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { createAuditLog } from "@/lib/audit";
 import { adminCreateUser } from "@/lib/admin-api";
+import { hasPermission, type AppRole } from "@/lib/permissions";
 import { maskCPF, maskPhone, unmask, formatPhone, formatCPF } from "@/lib/masks";
 import { validateAlunoForm } from "@/lib/validators";
 
@@ -37,7 +38,7 @@ const Alunos = () => {
   const [alunos, setAlunos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const { hasRole } = useAuth();
+  const { hasRole, institutionId, roles } = useAuth();
 
   const [cursos, setCursos] = useState<any[]>([]);
   const [turmas, setTurmas] = useState<any[]>([]);
@@ -58,7 +59,7 @@ const Alunos = () => {
   const [editFormErrors, setEditFormErrors] = useState<Record<string, string>>({});
   const [editTurmasFiltradas, setEditTurmasFiltradas] = useState<any[]>([]);
 
-  const canManage = hasRole("admin") || hasRole("secretaria");
+  const canManage = hasPermission(roles as AppRole[], "alunos.create");
 
   const fetchAlunos = async () => {
     setLoading(true);
@@ -168,6 +169,7 @@ const Alunos = () => {
         full_name: form.full_name,
         role: "aluno",
         phone: unmask(form.phone) || undefined,
+        institution_id: institutionId || undefined,
       });
 
       if (error || !user) {
@@ -181,6 +183,7 @@ const Alunos = () => {
         cpf: unmask(form.cpf) || null,
         cidade: form.cidade || null,
         estado: form.estado || "PE",
+        institution_id: institutionId,
       }).select("id").single();
 
       if (alunoError) {
@@ -193,6 +196,7 @@ const Alunos = () => {
           aluno_id: alunoData.id,
           turma_id: form.turma_id,
           status: "ativa",
+          institution_id: institutionId,
         });
       }
 
@@ -333,6 +337,7 @@ const Alunos = () => {
               aluno_id: editingAluno.id,
               turma_id: newTurmaId,
               status: "ativa",
+              institution_id: institutionId,
             });
           }
         }

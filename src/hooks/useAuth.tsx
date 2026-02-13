@@ -2,7 +2,7 @@ import { createContext, useContext, useEffect, useState, ReactNode } from "react
 import { supabase } from "@/integrations/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
 
-type AppRole = "admin" | "secretaria" | "professor" | "aluno" | "coordenador";
+type AppRole = "admin" | "secretaria" | "professor" | "aluno" | "coordenador" | "super_admin" | "tecnico";
 
 interface Profile {
   id: string;
@@ -11,6 +11,17 @@ interface Profile {
   email: string;
   phone: string | null;
   avatar_url: string | null;
+  institution_id: string | null;
+}
+
+interface Institution {
+  id: string;
+  name: string;
+  slug: string;
+  logo_url: string | null;
+  plan_id: string | null;
+  subscription_status: string | null;
+  is_active: boolean | null;
 }
 
 interface AuthContextType {
@@ -18,11 +29,13 @@ interface AuthContextType {
   session: Session | null;
   profile: Profile | null;
   roles: AppRole[];
+  institution: Institution | null;
+  institutionId: string | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
-  signUp: (email: string, password: string, fullName: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   hasRole: (role: AppRole) => boolean;
+  isSuperAdmin: boolean;
   isAdmin: boolean;
   isSecretaria: boolean;
   isProfessor: boolean;
@@ -36,6 +49,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [roles, setRoles] = useState<AppRole[]>([]);
+  const [institution, setInstitution] = useState<Institution | null>(null);
   const [loading, setLoading] = useState(true);
 
   const loadUserData = async (userId: string) => {
@@ -46,10 +60,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       ]);
       setProfile(profileRes.data);
       setRoles((rolesRes.data as AppRole[]) || []);
+
+      // Load institution data
+      if (profileRes.data?.institution_id) {
+        const { data: instData } = await supabase
+          .from("institutions")
+          .select("id, name, slug, logo_url, plan_id, subscription_status, is_active")
+          .eq("id", profileRes.data.institution_id)
+          .single();
+        setInstitution(instData);
+      } else {
+        setInstitution(null);
+      }
     } catch (err) {
       console.error("Error loading user data:", err);
       setProfile(null);
       setRoles([]);
+      setInstitution(null);
     } finally {
       setLoading(false);
     }
@@ -62,13 +89,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(session?.user ?? null);
 
         if (session?.user) {
-          // Set loading true while we fetch roles — prevents premature redirect
           setLoading(true);
-          // Don't await inside the callback — it causes a deadlock in supabase-js
           loadUserData(session.user.id);
         } else {
           setProfile(null);
           setRoles([]);
+          setInstitution(null);
           setLoading(false);
         }
       }
@@ -82,22 +108,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error };
   };
 
-  const signUp = async (email: string, password: string, fullName: string) => {
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: window.location.origin,
-        data: { full_name: fullName },
-      },
-    });
-    return { error };
-  };
-
   const signOut = async () => {
     await supabase.auth.signOut();
     setProfile(null);
     setRoles([]);
+    setInstitution(null);
   };
 
   const hasRole = (role: AppRole) => roles.includes(role);
@@ -109,12 +124,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         session,
         profile,
         roles,
+        institution,
+        institutionId: profile?.institution_id || null,
         loading,
         signIn,
-        signUp,
         signOut,
         hasRole,
-        isAdmin: hasRole("admin"),
+        isSuperAdmin: hasRole("super_admin"),
+        isAdmin: hasRole("admin") || hasRole("super_admin"),
         isSecretaria: hasRole("secretaria"),
         isProfessor: hasRole("professor"),
         isAluno: hasRole("aluno"),

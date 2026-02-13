@@ -1,174 +1,196 @@
-// RBAC Permission System for SIAP
-// Defines granular permissions per role
+// ========================================
+// RBAC Permission System - SaaS Multi-Tenant
+// ========================================
 
-export type AppRole = "admin" | "secretaria" | "professor" | "aluno" | "coordenador";
+export type AppRole =
+  | "super_admin"
+  | "admin"
+  | "coordenador"
+  | "secretaria"
+  | "tecnico"
+  | "professor"
+  | "aluno";
 
 export type Permission =
+  // Dashboard
+  | "dashboard.admin"
+  | "dashboard.aluno"
+  | "dashboard.platform"
   // Users
   | "users.view"
   | "users.create"
   | "users.edit"
   | "users.delete"
-  // Courses
-  | "cursos.view"
-  | "cursos.create"
-  | "cursos.edit"
-  | "cursos.delete"
-  // Disciplines
-  | "disciplinas.view"
-  | "disciplinas.create"
-  | "disciplinas.edit"
-  | "disciplinas.delete"
+  // Students
+  | "alunos.view"
+  | "alunos.create"
+  | "alunos.edit"
+  | "alunos.delete"
   // Classes
   | "turmas.view"
   | "turmas.create"
   | "turmas.edit"
   | "turmas.delete"
-  // Students
-  | "alunos.view"
-  | "alunos.view_all"
-  | "alunos.create"
-  | "alunos.edit"
-  | "alunos.delete"
-  // Enrollments
-  | "matriculas.view"
-  | "matriculas.create"
-  | "matriculas.edit"
+  // Courses
+  | "cursos.view"
+  | "cursos.create"
+  | "cursos.edit"
+  | "cursos.delete"
+  // Subjects
+  | "disciplinas.view"
+  | "disciplinas.create"
+  | "disciplinas.edit"
+  | "disciplinas.delete"
   // Grades
   | "notas.view"
-  | "notas.view_own"
   | "notas.create"
   | "notas.edit"
-  // Attendance
-  | "frequencia.view"
-  | "frequencia.create"
-  | "frequencia.edit"
+  | "notas.delete"
   // Documents
   | "documentos.view"
-  | "documentos.upload"
+  | "documentos.create"
   | "documentos.generate"
-  | "documentos.delete"
   // Requests
   | "requerimentos.view"
-  | "requerimentos.view_own"
   | "requerimentos.create"
   | "requerimentos.respond"
   // Audit
   | "audit.view"
-  // Dashboard
-  | "dashboard.admin"
-  | "dashboard.aluno";
+  // Institutions (super_admin)
+  | "institutions.view"
+  | "institutions.create"
+  | "institutions.edit"
+  | "institutions.delete"
+  // Platform (super_admin)
+  | "platform.view"
+  | "platform.manage"
+  | "plans.manage";
 
-const ROLE_PERMISSIONS: Record<AppRole, Permission[]> = {
-  admin: [
+const rolePermissions: Record<AppRole, Permission[]> = {
+  super_admin: [
+    "dashboard.admin",
+    "dashboard.platform",
     "users.view", "users.create", "users.edit", "users.delete",
+    "alunos.view", "alunos.create", "alunos.edit", "alunos.delete",
+    "turmas.view", "turmas.create", "turmas.edit", "turmas.delete",
     "cursos.view", "cursos.create", "cursos.edit", "cursos.delete",
     "disciplinas.view", "disciplinas.create", "disciplinas.edit", "disciplinas.delete",
-    "turmas.view", "turmas.create", "turmas.edit", "turmas.delete",
-    "alunos.view", "alunos.view_all", "alunos.create", "alunos.edit", "alunos.delete",
-    "matriculas.view", "matriculas.create", "matriculas.edit",
-    "notas.view", "notas.view_own", "notas.create", "notas.edit",
-    "frequencia.view", "frequencia.create", "frequencia.edit",
-    "documentos.view", "documentos.upload", "documentos.generate", "documentos.delete",
-    "requerimentos.view", "requerimentos.view_own", "requerimentos.create", "requerimentos.respond",
+    "notas.view", "notas.create", "notas.edit", "notas.delete",
+    "documentos.view", "documentos.create", "documentos.generate",
+    "requerimentos.view", "requerimentos.create", "requerimentos.respond",
     "audit.view",
-    "dashboard.admin",
-    "dashboard.aluno",
+    "institutions.view", "institutions.create", "institutions.edit", "institutions.delete",
+    "platform.view", "platform.manage", "plans.manage",
   ],
-  secretaria: [
-    "cursos.view", "cursos.create", "cursos.edit",
-    "disciplinas.view", "disciplinas.create", "disciplinas.edit",
-    "turmas.view", "turmas.create", "turmas.edit",
-    "alunos.view", "alunos.view_all", "alunos.create", "alunos.edit",
-    "matriculas.view", "matriculas.create", "matriculas.edit",
-    "notas.view", "notas.create", "notas.edit",
-    "frequencia.view", "frequencia.create", "frequencia.edit",
-    "documentos.view", "documentos.upload", "documentos.generate",
-    "requerimentos.view", "requerimentos.view_own", "requerimentos.create", "requerimentos.respond",
+  admin: [
     "dashboard.admin",
+    "users.view", "users.create", "users.edit", "users.delete",
+    "alunos.view", "alunos.create", "alunos.edit", "alunos.delete",
+    "turmas.view", "turmas.create", "turmas.edit", "turmas.delete",
+    "cursos.view", "cursos.create", "cursos.edit", "cursos.delete",
+    "disciplinas.view", "disciplinas.create", "disciplinas.edit", "disciplinas.delete",
+    "notas.view", "notas.create", "notas.edit", "notas.delete",
+    "documentos.view", "documentos.create", "documentos.generate",
+    "requerimentos.view", "requerimentos.create", "requerimentos.respond",
+    "audit.view",
   ],
   coordenador: [
+    "dashboard.admin",
+    "alunos.view", "alunos.edit",
+    "turmas.view", "turmas.create", "turmas.edit",
+    "cursos.view",
+    "disciplinas.view", "disciplinas.create", "disciplinas.edit",
+    "notas.view", "notas.create", "notas.edit",
+    "documentos.view", "documentos.generate",
+    "requerimentos.view", "requerimentos.respond",
+    "audit.view",
+  ],
+  secretaria: [
+    "dashboard.admin",
+    "users.view", "users.create",
+    "alunos.view", "alunos.create", "alunos.edit",
+    "turmas.view", "turmas.create", "turmas.edit",
+    "cursos.view", "cursos.create",
+    "disciplinas.view", "disciplinas.create", "disciplinas.edit",
+    "notas.view",
+    "documentos.view", "documentos.create", "documentos.generate",
+    "requerimentos.view", "requerimentos.create", "requerimentos.respond",
+    "audit.view",
+  ],
+  tecnico: [
+    "dashboard.admin",
+    "users.view",
+    "alunos.view", "alunos.create", "alunos.edit",
+    "turmas.view", "turmas.create", "turmas.edit",
     "cursos.view",
     "disciplinas.view",
-    "turmas.view",
-    "alunos.view", "alunos.view_all",
-    "matriculas.view",
     "notas.view",
-    "frequencia.view",
-    "documentos.view", "documentos.generate",
-    "requerimentos.view", "requerimentos.view_own", "requerimentos.respond",
-    "dashboard.admin",
+    "documentos.view", "documentos.create", "documentos.generate",
+    "requerimentos.view", "requerimentos.create", "requerimentos.respond",
   ],
   professor: [
+    "dashboard.admin",
+    "alunos.view",
     "turmas.view",
     "disciplinas.view",
-    "alunos.view",
-    "notas.view", "notas.view_own", "notas.create", "notas.edit",
-    "frequencia.view", "frequencia.create", "frequencia.edit",
-    "documentos.view", "documentos.generate",
-    "requerimentos.view_own", "requerimentos.create",
-    "dashboard.admin",
+    "notas.view", "notas.create", "notas.edit",
+    "documentos.view",
+    "requerimentos.view", "requerimentos.create",
   ],
   aluno: [
-    "notas.view",
-    "notas.view_own",
-    "frequencia.view",
-    "documentos.view",
-    "requerimentos.view_own", "requerimentos.view", "requerimentos.create",
     "dashboard.aluno",
+    "notas.view",
+    "documentos.view",
+    "requerimentos.view", "requerimentos.create",
   ],
 };
 
 export function hasPermission(roles: AppRole[], permission: Permission): boolean {
-  return roles.some((role) => ROLE_PERMISSIONS[role]?.includes(permission));
+  return roles.some((role) => rolePermissions[role]?.includes(permission));
 }
 
-export function getPermissions(roles: AppRole[]): Permission[] {
+export function getAllPermissions(roles: AppRole[]): Permission[] {
   const perms = new Set<Permission>();
   roles.forEach((role) => {
-    ROLE_PERMISSIONS[role]?.forEach((p) => perms.add(p));
+    rolePermissions[role]?.forEach((p) => perms.add(p));
   });
   return Array.from(perms);
 }
 
+const roleLabels: Record<AppRole, string> = {
+  super_admin: "Super Admin",
+  admin: "Administrador",
+  coordenador: "Coordenador",
+  secretaria: "Secretária",
+  tecnico: "Técnico Administrativo",
+  professor: "Professor",
+  aluno: "Aluno",
+};
+
 export function getRoleLabel(role: AppRole): string {
-  const labels: Record<AppRole, string> = {
-    admin: "Administrador",
-    secretaria: "Técnico Administrativo",
-    professor: "Professor",
-    aluno: "Aluno",
-    coordenador: "Coordenador",
-  };
-  return labels[role] || role;
+  return roleLabels[role] || role;
 }
+
+const roleColors: Record<AppRole, string> = {
+  super_admin: "bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-400 dark:border-purple-800",
+  admin: "bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800",
+  coordenador: "bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-800",
+  secretaria: "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800",
+  tecnico: "bg-teal-100 text-teal-700 border-teal-200 dark:bg-teal-900/30 dark:text-teal-400 dark:border-teal-800",
+  professor: "bg-green-100 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400 dark:border-green-800",
+  aluno: "bg-sky-100 text-sky-700 border-sky-200 dark:bg-sky-900/30 dark:text-sky-400 dark:border-sky-800",
+};
 
 export function getRoleColor(role: AppRole): string {
-  const colors: Record<AppRole, string> = {
-    admin: "bg-destructive/10 text-destructive border-destructive/20",
-    secretaria: "bg-info/10 text-info border-info/20",
-    professor: "bg-accent/10 text-accent border-accent/20",
-    aluno: "bg-success/10 text-success border-success/20",
-    coordenador: "bg-warning/10 text-warning border-warning/20",
-  };
-  return colors[role] || "bg-muted text-muted-foreground";
+  return roleColors[role] || "bg-muted text-muted-foreground border-border";
 }
 
-// Navigation items filtered by role
-export interface NavItem {
-  to: string;
-  label: string;
-  icon: string; // icon name, resolved in component
-  permission: Permission;
-}
+/** Roles available for institutional admin to assign (excludes super_admin) */
+export const assignableRoles: AppRole[] = [
+  "admin", "coordenador", "secretaria", "tecnico", "professor", "aluno",
+];
 
-export const NAV_ITEMS: NavItem[] = [
-  { to: "/", label: "Dashboard", icon: "LayoutDashboard", permission: "dashboard.admin" },
-  { to: "/painel-aluno", label: "Meu Painel", icon: "GraduationCap", permission: "dashboard.aluno" },
-  { to: "/usuarios", label: "Usuários", icon: "UserCog", permission: "users.view" },
-  { to: "/alunos", label: "Alunos", icon: "Users", permission: "alunos.view" },
-  { to: "/turmas", label: "Turmas", icon: "GraduationCap", permission: "turmas.view" },
-  { to: "/notas", label: "Notas", icon: "BookOpen", permission: "notas.view" },
-  { to: "/documentos", label: "Documentos", icon: "FileText", permission: "documentos.view" },
-  { to: "/requerimentos", label: "Requerimentos", icon: "ClipboardList", permission: "requerimentos.view" },
-  { to: "/auditoria", label: "Auditoria", icon: "ShieldCheck", permission: "audit.view" },
+/** Roles available for super_admin to assign (includes all) */
+export const allRoles: AppRole[] = [
+  "super_admin", "admin", "coordenador", "secretaria", "tecnico", "professor", "aluno",
 ];

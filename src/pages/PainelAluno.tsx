@@ -36,7 +36,7 @@ const diasSemana: Record<number, string> = {
 };
 
 const PainelAluno = () => {
-  const { user, profile } = useAuth();
+  const { user, profile, institutionId } = useAuth();
   const [loading, setLoading] = useState(true);
   const [alunoData, setAlunoData] = useState<any>(null);
   const [grades, setGrades] = useState<GradeRow[]>([]);
@@ -150,6 +150,7 @@ const PainelAluno = () => {
       numero_validacao: validationCode,
       generated_by: user!.id,
       generated_by_name: profile?.full_name || "—",
+      institution_id: institutionId,
     });
 
     await createAuditLog({
@@ -173,6 +174,7 @@ const PainelAluno = () => {
       numero_validacao: validationCode,
       generated_by: user!.id,
       generated_by_name: profile?.full_name || "—",
+      institution_id: institutionId,
     });
 
     await createAuditLog({

@@ -13,6 +13,8 @@ import {
   X,
   UserCog,
   ShieldCheck,
+  Building2,
+  BarChart3,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { cn } from "@/lib/utils";
@@ -29,6 +31,8 @@ const iconMap: Record<string, any> = {
   ClipboardList,
   UserCog,
   ShieldCheck,
+  Building2,
+  BarChart3,
 };
 
 interface NavItemDef {
@@ -41,6 +45,8 @@ interface NavItemDef {
 const allNavItems: NavItemDef[] = [
   { to: "/dashboard", icon: "LayoutDashboard", label: "Dashboard", permission: "dashboard.admin" },
   { to: "/painel-aluno", icon: "GraduationCap", label: "Meu Painel", permission: "dashboard.aluno" },
+  { to: "/institutions", icon: "Building2", label: "Instituições", permission: "institutions.view" },
+  { to: "/platform", icon: "BarChart3", label: "Plataforma", permission: "platform.view" },
   { to: "/usuarios", icon: "UserCog", label: "Usuários", permission: "users.view" },
   { to: "/alunos", icon: "Users", label: "Alunos", permission: "alunos.view" },
   { to: "/turmas", icon: "GraduationCap", label: "Turmas", permission: "turmas.view" },
@@ -58,7 +64,7 @@ interface AppSidebarProps {
 
 export function AppSidebar({ mobileOpen, onMobileClose }: AppSidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
-  const { profile, roles, signOut } = useAuth();
+  const { profile, roles, signOut, institution, isSuperAdmin } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const isMobile = useIsMobile();
@@ -109,8 +115,12 @@ export function AppSidebar({ mobileOpen, onMobileClose }: AppSidebarProps) {
           </div>
           {(!collapsed || isMobile) && (
             <div className="animate-slide-in">
-              <h1 className="text-sm font-bold text-sidebar-foreground tracking-tight">SIAP</h1>
-              <p className="text-[10px] text-sidebar-foreground/30 font-medium tracking-wide">Sistema Acadêmico</p>
+              <h1 className="text-sm font-bold text-sidebar-foreground tracking-tight">
+                {institution?.name || "SIAP"}
+              </h1>
+              <p className="text-[10px] text-sidebar-foreground/30 font-medium tracking-wide">
+                {isSuperAdmin ? "Super Admin" : "Sistema Acadêmico"}
+              </p>
             </div>
           )}
         </div>

@@ -13,7 +13,7 @@ import { getRoleLabel, type AppRole } from "@/lib/permissions";
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const { profile, roles } = useAuth();
+  const { profile, roles, institution } = useAuth();
   const [stats, setStats] = useState({ alunos: 0, turmas: 0, reqPendentes: 0, documentos: 0 });
   const [requerimentos, setRequerimentos] = useState<any[]>([]);
   const [turmas, setTurmas] = useState<any[]>([]);
@@ -59,7 +59,7 @@ const Dashboard = () => {
                 Bem-vindo, {profile?.full_name?.split(" ")[0] || "Administrador"}
               </h1>
               <p className="text-sm opacity-80 mt-1">
-                {getRoleLabel((roles[0] || "admin") as AppRole)} &middot; Visão geral do sistema acadêmico
+                {getRoleLabel((roles[0] || "admin") as AppRole)} {institution ? `· ${institution.name}` : "· Visão geral do sistema acadêmico"}
               </p>
             </div>
             <div className="flex items-center gap-3">

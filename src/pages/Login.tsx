@@ -62,7 +62,7 @@ const Login = () => {
               Sistema Integrado de<br />Administração Pedagógica
             </h2>
             <p className="text-primary-foreground/70 text-lg max-w-md leading-relaxed">
-              Centralize todas as operações acadêmicas em uma plataforma moderna, segura e eficiente.
+              Plataforma SaaS completa para gestão acadêmica. Multi-instituição, segura e eficiente.
             </p>
           </div>
 
@@ -78,7 +78,7 @@ const Login = () => {
 
         <div className="relative z-10 text-primary-foreground/40 text-xs">
           <p>&copy; {new Date().getFullYear()} SIAP. Todos os direitos reservados.</p>
-          <p className="mt-1 text-primary-foreground/25">Versão 2.0.0 &middot; Ambiente seguro</p>
+          <p className="mt-1 text-primary-foreground/25">Versão 3.0.0 SaaS &middot; Ambiente seguro</p>
         </div>
       </div>
 

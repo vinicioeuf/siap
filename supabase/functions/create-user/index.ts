@@ -36,9 +36,10 @@ Deno.serve(async (req) => {
       )
     }
 
-    // Check if calling user has admin or secretaria role
+    // Check if calling user has admin, secretaria, or super_admin role
     const { data: roles } = await userClient.rpc('get_user_roles', { _user_id: caller.id })
-    const isAuthorized = roles?.includes('admin') || roles?.includes('secretaria')
+    const isSuperAdmin = roles?.includes('super_admin')
+    const isAuthorized = isSuperAdmin || roles?.includes('admin') || roles?.includes('secretaria')
     if (!isAuthorized) {
       return new Response(
         JSON.stringify({ error: 'Permissão insuficiente. Apenas administradores podem criar usuários.' }),
@@ -47,13 +48,24 @@ Deno.serve(async (req) => {
     }
 
     // 2. Parse request body
-    const { email, password, full_name, role, phone } = await req.json()
+    const { email, password, full_name, role, phone, institution_id } = await req.json()
 
     if (!email || !password || !full_name) {
       return new Response(
         JSON.stringify({ error: 'Campos obrigatórios: email, password, full_name' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
+    }
+
+    // Determine institution_id: super_admin can specify any, others use their own
+    let targetInstitutionId = institution_id
+    if (!isSuperAdmin) {
+      const { data: callerProfile } = await userClient
+        .from('profiles')
+        .select('institution_id')
+        .eq('user_id', caller.id)
+        .single()
+      targetInstitutionId = callerProfile?.institution_id
     }
 
     // 3. Create admin client with service role key
@@ -66,7 +78,11 @@ Deno.serve(async (req) => {
       email,
       password,
       email_confirm: true, // Auto-confirm - no verification email
-      user_metadata: { full_name, role: role || 'aluno' },
+      user_metadata: {
+        full_name,
+        role: role || 'aluno',
+        institution_id: targetInstitutionId || undefined,
+      },
     })
 
     if (createError) {

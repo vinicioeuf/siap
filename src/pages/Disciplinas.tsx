@@ -34,7 +34,7 @@ const Disciplinas = () => {
   const [cursos, setCursos] = useState<any[]>([]);
   const [professores, setProfessores] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const { hasRole, roles } = useAuth();
+  const { hasRole, roles, institutionId } = useAuth();
 
   const canManage = hasRole("admin") || hasRole("secretaria");
   const canDelete = hasPermission(roles as AppRole[], "disciplinas.delete");
@@ -101,6 +101,7 @@ const Disciplinas = () => {
         carga_horaria: parseInt(form.carga_horaria) || 60,
         curso_id: form.curso_id || null,
         professor_id: form.professor_id || null,
+        institution_id: institutionId,
       }).select().single();
 
       if (error) {

@@ -1,7 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 
 export type AuditAction = "create" | "update" | "delete" | "soft_delete" | "restore" | "login" | "logout" | "generate_document";
-export type EntityType = "curso" | "disciplina" | "aluno" | "turma" | "nota" | "documento" | "requerimento" | "user" | "generated_document";
+export type EntityType = "curso" | "disciplina" | "aluno" | "turma" | "nota" | "documento" | "requerimento" | "user" | "generated_document" | "institution" | "subscription";
 
 interface AuditLogEntry {
   action: AuditAction;
@@ -18,7 +18,7 @@ export async function createAuditLog(entry: AuditLogEntry) {
 
     const { data: profile } = await supabase
       .from("profiles")
-      .select("full_name")
+      .select("full_name, institution_id")
       .eq("user_id", user.id)
       .single();
 
@@ -30,6 +30,7 @@ export async function createAuditLog(entry: AuditLogEntry) {
       entity_id: entry.entity_id,
       entity_name: entry.entity_name,
       details: entry.details || {},
+      institution_id: profile?.institution_id || null,
     });
   } catch (error) {
     console.error("Erro ao registrar log de auditoria:", error);
