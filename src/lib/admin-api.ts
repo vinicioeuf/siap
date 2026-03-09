@@ -4,7 +4,10 @@
 // Uses Supabase Edge Function "create-user" to bypass email rate limits.
 // Falls back to signUp if Edge Function is not deployed.
 
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
 import { supabase, supabaseAuth } from "@/integrations/supabase/client";
+import { db } from './firebase';
+
 
 interface CreateUserParams {
   email: string;
@@ -136,4 +139,30 @@ function translateError(message: string): string {
   }
 
   return message;
+}
+
+// Exemplo: Buscar todos os usuários
+export async function getUsers() {
+  const usersCol = collection(db, 'users');
+  const usersSnapshot = await getDocs(usersCol);
+  return usersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+}
+
+// Exemplo: Adicionar usuário
+export async function addUser(data) {
+  const usersCol = collection(db, 'users');
+  const docRef = await addDoc(usersCol, data);
+  return docRef.id;
+}
+
+// Exemplo: Atualizar usuário
+export async function updateUser(id, data) {
+  const userDoc = doc(db, 'users', id);
+  await updateDoc(userDoc, data);
+}
+
+// Exemplo: Remover usuário
+export async function deleteUser(id) {
+  const userDoc = doc(db, 'users', id);
+  await deleteDoc(userDoc);
 }
