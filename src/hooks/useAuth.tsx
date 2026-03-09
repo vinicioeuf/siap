@@ -1,6 +1,14 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import type { User, Session } from "@supabase/supabase-js";
+
+interface User {
+  id: string;
+  email: string | null;
+}
+
+interface Session {
+  user: User;
+}
 
 type AppRole = "admin" | "secretaria" | "professor" | "aluno" | "coordenador" | "super_admin" | "tecnico";
 
@@ -52,12 +60,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [institution, setInstitution] = useState<Institution | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const loadUserData = async (userId: string) => {
+  const loadUserData = async (userId: string, userEmail?: string | null) => {
     try {
-      const [profileRes, rolesRes] = await Promise.all([
+      let [profileRes, rolesRes] = await Promise.all([
         supabase.from("profiles").select("*").eq("user_id", userId).single(),
         supabase.rpc("get_user_roles", { _user_id: userId }),
       ]);
+
+      if (!profileRes.data && userEmail) {
+        await supabase.from("profiles").insert({
+          id: userId,
+          user_id: userId,
+          full_name: userEmail.split("@")[0],
+          email: userEmail,
+          phone: null,
+          avatar_url: null,
+          institution_id: null,
+        });
+        profileRes = await supabase.from("profiles").select("*").eq("user_id", userId).single();
+      }
+
+      if (!rolesRes.data || rolesRes.data.length === 0) {
+        const totalRoles = await supabase
+          .from("user_roles")
+          .select("id", { count: "exact", head: true });
+
+        const initialRole: AppRole = (totalRoles.count || 0) === 0 ? "super_admin" : "aluno";
+        await supabase.from("user_roles").insert({
+          id: `${userId}_${initialRole}`,
+          user_id: userId,
+          role: initialRole,
+        });
+        rolesRes = await supabase.rpc("get_user_roles", { _user_id: userId });
+      }
+
       setProfile(profileRes.data);
       setRoles((rolesRes.data as AppRole[]) || []);
 
@@ -90,7 +126,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         if (session?.user) {
           setLoading(true);
-          loadUserData(session.user.id);
+          loadUserData(session.user.id, session.user.email);
         } else {
           setProfile(null);
           setRoles([]);
