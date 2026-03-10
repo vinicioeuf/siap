@@ -15,6 +15,7 @@ import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { createAuditLog } from "@/lib/audit";
 import { cn } from "@/lib/utils";
+import { hasPermission, type AppRole } from "@/lib/permissions";
 
 function FieldError({ error }: { error?: string }) {
   if (!error) return null;
@@ -28,13 +29,13 @@ const Notas = () => {
   const { hasRole, user, roles, institutionId } = useAuth();
 
   // Permission checks
+  const appRoles = roles as AppRole[];
   const isAdmin = hasRole("admin");
   const isSecretaria = hasRole("secretaria");
   const isProfessor = hasRole("professor");
-  const isAluno = hasRole("aluno");
-  const canCreate = isAdmin || isSecretaria || isProfessor;
-  const canEdit = isAdmin || isSecretaria || isProfessor;
-  const canDelete = isAdmin;
+  const canCreate = hasPermission(appRoles, "notas.create");
+  const canEdit = hasPermission(appRoles, "notas.edit");
+  const canDelete = hasPermission(appRoles, "notas.delete");
 
   // Create/Edit dialog
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -58,6 +59,20 @@ const Notas = () => {
   const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; nota: any | null }>({ open: false, nota: null });
   const [deleting, setDeleting] = useState(false);
 
+  // Frequencia dialog
+  const [freqDialogOpen, setFreqDialogOpen] = useState(false);
+  const [savingFreq, setSavingFreq] = useState(false);
+  const [freqErrors, setFreqErrors] = useState<Record<string, string>>({});
+  const [freqForm, setFreqForm] = useState({
+    turma_id: "",
+    disciplina_id: "",
+    aluno_id: "",
+    data: new Date().toISOString().slice(0, 10),
+    presente: "false",
+    justificativa: "",
+  });
+  const [freqAlunosList, setFreqAlunosList] = useState<any[]>([]);
+
   // Filter
   const [filterTurma, setFilterTurma] = useState("");
   const [filterDisciplina, setFilterDisciplina] = useState("");
@@ -67,7 +82,7 @@ const Notas = () => {
   // ========================================
   const fetchNotas = async () => {
     setLoading(true);
-    let query = supabase
+    const query = supabase
       .from("notas")
       .select("*, disciplinas(nome)")
       .order("created_at", { ascending: false });
@@ -76,23 +91,42 @@ const Notas = () => {
 
     if (data && data.length > 0) {
       const alunoIds = [...new Set(data.map((n) => n.aluno_id))];
+      const disciplinaIds = [...new Set(data.map((n) => n.disciplina_id).filter(Boolean))];
       const { data: alunos } = await supabase
         .from("alunos")
         .select("id, user_id, matricula")
         .in("id", alunoIds);
-      const userIds = alunos?.map((a) => a.user_id) || [];
+      const { data: disciplinasRows } = await supabase
+        .from("disciplinas")
+        .select("id, nome")
+        .in("id", disciplinaIds as string[]);
+      const { data: frequenciaRows } = await supabase
+        .from("frequencia")
+        .select("aluno_id, disciplina_id, presente")
+        .in("aluno_id", alunoIds);
       const { data: profiles } = await supabase
         .from("profiles")
         .select("user_id, full_name");
 
       const profileMap = new Map();
       profiles?.forEach((p) => profileMap.set(p.user_id, p));
+      const disciplinaMap = new Map();
+      disciplinasRows?.forEach((d) => disciplinaMap.set(d.id, d));
       const alunoMap = new Map();
       alunos?.forEach((a) => alunoMap.set(a.id, { ...a, profile: profileMap.get(a.user_id) }));
+      const faltasMap = new Map<string, number>();
+      frequenciaRows?.forEach((f: any) => {
+        if (f.presente === false) {
+          const key = `${f.aluno_id}_${f.disciplina_id}`;
+          faltasMap.set(key, (faltasMap.get(key) || 0) + 1);
+        }
+      });
 
       const enriched = data.map((n) => ({
         ...n,
+        disciplinas: disciplinaMap.get(n.disciplina_id) || n.disciplinas || null,
         aluno: alunoMap.get(n.aluno_id) || null,
+        faltas: faltasMap.get(`${n.aluno_id}_${n.disciplina_id}`) || 0,
       }));
       setNotas(enriched);
     } else {
@@ -126,27 +160,35 @@ const Notas = () => {
   useEffect(() => {
     if (form.turma_id) {
       const fetchStudents = async () => {
-        const { data } = await supabase
+        const { data: matriculas } = await supabase
           .from("matriculas")
-          .select("aluno_id, alunos(id, user_id, matricula)")
+          .select("aluno_id")
           .eq("turma_id", form.turma_id)
           .eq("status", "ativa");
 
-        if (data) {
-          const alunoIds = data.map((m: any) => m.alunos?.user_id).filter(Boolean);
+        if (matriculas && matriculas.length > 0) {
+          const ids = [...new Set(matriculas.map((m: any) => m.aluno_id).filter(Boolean))];
+          const { data: alunos } = await supabase
+            .from("alunos")
+            .select("id, user_id, matricula")
+            .in("id", ids);
+
+          const userIds = (alunos || []).map((a: any) => a.user_id).filter(Boolean);
           const { data: profiles } = await supabase
             .from("profiles")
             .select("user_id, full_name")
-            .in("user_id", alunoIds);
+            .in("user_id", userIds);
 
           const profileMap = new Map();
           profiles?.forEach((p) => profileMap.set(p.user_id, p));
 
-          const enriched = data.map((m: any) => ({
-            ...m.alunos,
-            profile: profileMap.get(m.alunos?.user_id),
-          })).filter(Boolean);
+          const enriched = (alunos || []).map((a: any) => ({
+            ...a,
+            profile: profileMap.get(a.user_id),
+          }));
           setAlunosList(enriched);
+        } else {
+          setAlunosList([]);
         }
       };
       fetchStudents();
@@ -154,6 +196,48 @@ const Notas = () => {
       setAlunosList([]);
     }
   }, [form.turma_id]);
+
+  // Fetch students for frequencia dialog
+  useEffect(() => {
+    if (freqForm.turma_id) {
+      const fetchFreqStudents = async () => {
+        const { data: matriculas } = await supabase
+          .from("matriculas")
+          .select("aluno_id")
+          .eq("turma_id", freqForm.turma_id)
+          .eq("status", "ativa");
+
+        if (matriculas && matriculas.length > 0) {
+          const ids = [...new Set(matriculas.map((m: any) => m.aluno_id).filter(Boolean))];
+          const { data: alunos } = await supabase
+            .from("alunos")
+            .select("id, user_id, matricula")
+            .in("id", ids);
+
+          const userIds = (alunos || []).map((a: any) => a.user_id).filter(Boolean);
+          const { data: profiles } = await supabase
+            .from("profiles")
+            .select("user_id, full_name")
+            .in("user_id", userIds);
+
+          const profileMap = new Map();
+          profiles?.forEach((p) => profileMap.set(p.user_id, p));
+
+          const enriched = (alunos || []).map((a: any) => ({
+            ...a,
+            profile: profileMap.get(a.user_id),
+          }));
+          setFreqAlunosList(enriched);
+        } else {
+          setFreqAlunosList([]);
+        }
+      };
+
+      fetchFreqStudents();
+    } else {
+      setFreqAlunosList([]);
+    }
+  }, [freqForm.turma_id]);
 
   // ========================================
   // Get available disciplines (filtered for professor)
@@ -213,6 +297,19 @@ const Notas = () => {
     setDialogOpen(true);
   };
 
+  const openFrequencia = () => {
+    setFreqForm({
+      turma_id: "",
+      disciplina_id: "",
+      aluno_id: "",
+      data: new Date().toISOString().slice(0, 10),
+      presente: "false",
+      justificativa: "",
+    });
+    setFreqErrors({});
+    setFreqDialogOpen(true);
+  };
+
   const openEdit = (nota: any) => {
     setEditingNota(nota);
     setForm({
@@ -230,6 +327,10 @@ const Notas = () => {
   };
 
   const handleSave = async () => {
+    if (!institutionId) {
+      toast({ title: "Instituição não vinculada", description: "Seu usuário não possui instituição definida.", variant: "destructive" });
+      return;
+    }
     if (!validateForm()) return;
     if (saving) return;
     setSaving(true);
@@ -298,6 +399,51 @@ const Notas = () => {
     }
   };
 
+  const handleSaveFrequencia = async () => {
+    if (savingFreq) return;
+    if (!institutionId) {
+      toast({ title: "Instituição não vinculada", description: "Seu usuário não possui instituição definida.", variant: "destructive" });
+      return;
+    }
+
+    const errors: Record<string, string> = {};
+    if (!freqForm.turma_id) errors.turma_id = "Selecione uma turma";
+    if (!freqForm.disciplina_id) errors.disciplina_id = "Selecione uma disciplina";
+    if (!freqForm.aluno_id) errors.aluno_id = "Selecione um aluno";
+    if (!freqForm.data) errors.data = "Informe a data";
+    setFreqErrors(errors);
+    if (Object.keys(errors).length > 0) return;
+
+    setSavingFreq(true);
+    const payload = {
+      aluno_id: freqForm.aluno_id,
+      disciplina_id: freqForm.disciplina_id,
+      data: freqForm.data,
+      presente: freqForm.presente === "true",
+      justificativa: freqForm.justificativa || null,
+      institution_id: institutionId,
+    };
+
+    const { error } = await supabase.from("frequencia").insert(payload);
+    if (error) {
+      toast({ title: "Erro ao registrar frequência", description: error.message, variant: "destructive" });
+      setSavingFreq(false);
+      return;
+    }
+
+    await createAuditLog({
+      action: "create",
+      entity_type: "frequencia",
+      entity_name: "Registro de frequência",
+      details: payload,
+    });
+
+    toast({ title: payload.presente ? "Presença registrada!" : "Falta registrada!" });
+    setFreqDialogOpen(false);
+    setSavingFreq(false);
+    fetchNotas();
+  };
+
   const handleDelete = async () => {
     if (!deleteConfirm.nota) return;
     setDeleting(true);
@@ -346,9 +492,14 @@ const Notas = () => {
         breadcrumbs={[{ label: "Notas" }]}
         actions={
           canCreate ? (
-            <Button onClick={openCreate} className="gap-2 rounded-xl shadow-sm">
-              <Plus className="h-4 w-4" /> Lançar Nota
-            </Button>
+            <div className="flex gap-2">
+              <Button onClick={openFrequencia} variant="outline" className="gap-2 rounded-xl shadow-sm">
+                <Plus className="h-4 w-4" /> Registrar Falta
+              </Button>
+              <Button onClick={openCreate} className="gap-2 rounded-xl shadow-sm">
+                <Plus className="h-4 w-4" /> Lançar Nota
+              </Button>
+            </div>
           ) : undefined
         }
       />
@@ -390,6 +541,7 @@ const Notas = () => {
                   <th className="text-center text-[11px] font-semibold text-muted-foreground px-3 py-3 uppercase tracking-widest hidden sm:table-cell">P3</th>
                   <th className="text-center text-[11px] font-semibold text-muted-foreground px-3 py-3 uppercase tracking-widest hidden sm:table-cell">P4</th>
                   <th className="text-center text-[11px] font-semibold text-muted-foreground px-3 py-3 uppercase tracking-widest">Média</th>
+                  <th className="text-center text-[11px] font-semibold text-muted-foreground px-3 py-3 uppercase tracking-widest">Faltas</th>
                   <th className="text-left text-[11px] font-semibold text-muted-foreground px-5 py-3 uppercase tracking-widest">Situação</th>
                   {canEdit && <th className="text-center text-[11px] font-semibold text-muted-foreground px-3 py-3 uppercase tracking-widest">Ações</th>}
                 </tr>
@@ -413,6 +565,7 @@ const Notas = () => {
                         {formatNota(nota.media)}
                       </span>
                     </td>
+                    <td className="px-3 py-3 text-center text-sm font-semibold text-foreground">{nota.faltas || 0}</td>
                     <td className="px-5 py-3"><StatusBadge status={nota.status || "cursando"} /></td>
                     {canEdit && (
                       <td className="px-3 py-3 text-center">
@@ -523,6 +676,95 @@ const Notas = () => {
             {/* Submit */}
             <Button onClick={handleSave} disabled={saving} className="w-full rounded-xl h-11 text-sm font-semibold">
               {saving ? (<><Loader2 className="h-4 w-4 mr-2 animate-spin" />{editingNota ? "Salvando..." : "Lançando..."}</>) : (editingNota ? "Salvar Alterações" : "Lançar Nota")}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Frequencia Dialog */}
+      <Dialog open={freqDialogOpen} onOpenChange={setFreqDialogOpen}>
+        <DialogContent className="max-w-lg rounded-xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-lg">Registrar Frequência</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-2">
+            <div>
+              <label className="text-sm font-medium text-foreground mb-1.5 block">Turma *</label>
+              <select
+                className={`flex h-10 w-full rounded-xl border bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/30 ${freqErrors.turma_id ? 'border-destructive' : 'border-input'}`}
+                value={freqForm.turma_id}
+                onChange={(e) => setFreqForm({ ...freqForm, turma_id: e.target.value, aluno_id: "" })}
+              >
+                <option value="">Selecione uma turma...</option>
+                {getAvailableTurmas().map((t) => <option key={t.id} value={t.id}>{t.nome}</option>)}
+              </select>
+              <FieldError error={freqErrors.turma_id} />
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-foreground mb-1.5 block">Disciplina *</label>
+              <select
+                className={`flex h-10 w-full rounded-xl border bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/30 ${freqErrors.disciplina_id ? 'border-destructive' : 'border-input'}`}
+                value={freqForm.disciplina_id}
+                onChange={(e) => setFreqForm({ ...freqForm, disciplina_id: e.target.value })}
+              >
+                <option value="">Selecione uma disciplina...</option>
+                {getAvailableDisciplinas().map((d) => <option key={d.id} value={d.id}>{d.nome}</option>)}
+              </select>
+              <FieldError error={freqErrors.disciplina_id} />
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-foreground mb-1.5 block">Aluno *</label>
+              <select
+                className={`flex h-10 w-full rounded-xl border bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/30 ${freqErrors.aluno_id ? 'border-destructive' : 'border-input'}`}
+                value={freqForm.aluno_id}
+                onChange={(e) => setFreqForm({ ...freqForm, aluno_id: e.target.value })}
+              >
+                <option value="">
+                  {freqForm.turma_id ? (freqAlunosList.length === 0 ? "Nenhum aluno nesta turma" : "Selecione um aluno...") : "Selecione uma turma primeiro"}
+                </option>
+                {freqAlunosList.map((a) => <option key={a.id} value={a.id}>{a.profile?.full_name || a.matricula} ({a.matricula})</option>)}
+              </select>
+              <FieldError error={freqErrors.aluno_id} />
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-sm font-medium text-foreground mb-1.5 block">Data *</label>
+                <Input
+                  type="date"
+                  value={freqForm.data}
+                  onChange={(e) => setFreqForm({ ...freqForm, data: e.target.value })}
+                  className={`rounded-xl ${freqErrors.data ? 'border-destructive' : ''}`}
+                />
+                <FieldError error={freqErrors.data} />
+              </div>
+              <div>
+                <label className="text-sm font-medium text-foreground mb-1.5 block">Situação *</label>
+                <select
+                  className="flex h-10 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary/30"
+                  value={freqForm.presente}
+                  onChange={(e) => setFreqForm({ ...freqForm, presente: e.target.value })}
+                >
+                  <option value="false">Falta</option>
+                  <option value="true">Presença</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium text-foreground mb-1.5 block">Justificativa</label>
+              <Input
+                value={freqForm.justificativa}
+                onChange={(e) => setFreqForm({ ...freqForm, justificativa: e.target.value })}
+                placeholder="Opcional"
+                className="rounded-xl"
+              />
+            </div>
+
+            <Button onClick={handleSaveFrequencia} disabled={savingFreq} className="w-full rounded-xl h-11 text-sm font-semibold">
+              {savingFreq ? (<><Loader2 className="h-4 w-4 mr-2 animate-spin" />Salvando...</>) : "Salvar Frequência"}
             </Button>
           </div>
         </DialogContent>
