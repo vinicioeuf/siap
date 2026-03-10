@@ -3,13 +3,31 @@ import { getAuth, inMemoryPersistence, setPersistence } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 
+function cleanEnv(value: string | undefined) {
+  if (!value) return "";
+  const trimmed = value.trim();
+  // Vercel/UI sometimes stores values with wrapping quotes when pasted from .env.
+  return trimmed.replace(/^"|"$/g, "");
+}
+
+const firebaseApiKey = cleanEnv(import.meta.env.VITE_FIREBASE_API_KEY);
+const firebaseAuthDomain = cleanEnv(import.meta.env.VITE_FIREBASE_AUTH_DOMAIN);
+const firebaseProjectId = cleanEnv(import.meta.env.VITE_FIREBASE_PROJECT_ID);
+const firebaseStorageBucket = cleanEnv(import.meta.env.VITE_FIREBASE_STORAGE_BUCKET);
+const firebaseMessagingSenderId = cleanEnv(import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID);
+const firebaseAppId = cleanEnv(import.meta.env.VITE_FIREBASE_APP_ID);
+
+if (!firebaseApiKey || !firebaseAuthDomain || !firebaseProjectId || !firebaseAppId) {
+  throw new Error("Firebase env vars are missing or invalid in this build.");
+}
+
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  apiKey: firebaseApiKey,
+  authDomain: firebaseAuthDomain,
+  projectId: firebaseProjectId,
+  storageBucket: firebaseStorageBucket,
+  messagingSenderId: firebaseMessagingSenderId,
+  appId: firebaseAppId,
 };
 
 const app = initializeApp(firebaseConfig);
