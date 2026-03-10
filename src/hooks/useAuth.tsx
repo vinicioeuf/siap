@@ -94,15 +94,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         rolesRes = await supabase.rpc("get_user_roles", { _user_id: userId });
       }
 
-      setProfile(profileRes.data);
+      let resolvedProfile = profileRes.data;
+
+      // Legacy safeguard: recover institution_id from user_roles if profile has none.
+      if (!resolvedProfile?.institution_id) {
+        const { data: roleRows } = await supabase
+          .from("user_roles")
+          .select("institution_id")
+          .eq("user_id", userId);
+
+        const inferredInstitutionId = (roleRows || []).find((row: any) => Boolean(row.institution_id))?.institution_id || null;
+
+        if (inferredInstitutionId) {
+          const { data: updatedProfile } = await supabase
+            .from("profiles")
+            .update({ institution_id: inferredInstitutionId })
+            .eq("user_id", userId)
+            .select("*")
+            .single();
+
+          resolvedProfile = updatedProfile || { ...resolvedProfile, institution_id: inferredInstitutionId };
+        }
+      }
+
+      setProfile(resolvedProfile);
       setRoles((rolesRes.data as AppRole[]) || []);
 
       // Load institution data
-      if (profileRes.data?.institution_id) {
+      if (resolvedProfile?.institution_id) {
         const { data: instData } = await supabase
           .from("institutions")
           .select("id, name, slug, logo_url, plan_id, subscription_status, is_active")
-          .eq("id", profileRes.data.institution_id)
+          .eq("id", resolvedProfile.institution_id)
           .single();
         setInstitution(instData);
       } else {

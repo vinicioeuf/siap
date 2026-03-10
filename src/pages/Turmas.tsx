@@ -24,9 +24,15 @@ const Turmas = () => {
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [cursoDialogOpen, setCursoDialogOpen] = useState(false);
-  const { hasRole, roles, institutionId } = useAuth();
-  const canManage = hasRole("admin") || hasRole("secretaria");
-  const canDelete = hasPermission(roles as AppRole[], "cursos.delete");
+  const { roles, institutionId } = useAuth();
+  const appRoles = roles as AppRole[];
+  const canCreateTurma = hasPermission(appRoles, "turmas.create");
+  const canEditTurma = hasPermission(appRoles, "turmas.edit");
+  const canDeleteTurma = hasPermission(appRoles, "turmas.delete");
+  const canCreateCurso = hasPermission(appRoles, "cursos.create");
+  const canEditCurso = hasPermission(appRoles, "cursos.edit");
+  const canDeleteCurso = hasPermission(appRoles, "cursos.delete");
+  const canManage = canCreateTurma || canEditTurma || canDeleteTurma || canCreateCurso || canEditCurso || canDeleteCurso;
 
   const [form, setForm] = useState({ nome: "", codigo: "", curso_id: "", turno: "matutino", max_alunos: "40" });
   const [cursoForm, setCursoForm] = useState({ nome: "", descricao: "", duracao_semestres: "1" });
@@ -63,6 +69,14 @@ const Turmas = () => {
   useEffect(() => { fetchData(); }, []);
 
   const handleCreateTurma = async () => {
+    if (!canCreateTurma) {
+      toast({ title: "Sem permissão", description: "Seu perfil não pode criar turmas.", variant: "destructive" });
+      return;
+    }
+    if (!institutionId) {
+      toast({ title: "Instituição não vinculada", description: "Seu usuário não possui instituição definida. Contate o suporte/admin.", variant: "destructive" });
+      return;
+    }
     if (!form.nome) { toast({ title: "Nome é obrigatório", variant: "destructive" }); return; }
     setSaving(true);
     const { error } = await supabase.from("turmas").insert({
@@ -85,6 +99,14 @@ const Turmas = () => {
   };
 
   const handleCreateCurso = async () => {
+    if (!canCreateCurso) {
+      toast({ title: "Sem permissão", description: "Seu perfil não pode criar cursos.", variant: "destructive" });
+      return;
+    }
+    if (!institutionId) {
+      toast({ title: "Instituição não vinculada", description: "Seu usuário não possui instituição definida. Contate o suporte/admin.", variant: "destructive" });
+      return;
+    }
     if (!cursoForm.nome) { toast({ title: "Nome é obrigatório", variant: "destructive" }); return; }
     setSaving(true);
     const { data, error } = await supabase.from("cursos").insert({
@@ -249,72 +271,76 @@ const Turmas = () => {
         actions={
           canManage ? (
             <div className="flex gap-2">
-              <Dialog open={cursoDialogOpen} onOpenChange={setCursoDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="outline" className="gap-2 rounded-xl">
-                    <Plus className="h-4 w-4" /> Novo Curso
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-md rounded-xl">
-                  <DialogHeader><DialogTitle className="text-lg">Novo Curso</DialogTitle></DialogHeader>
-                  <div className="space-y-4 mt-2">
-                    <div>
-                      <label className="text-sm font-medium text-foreground mb-1.5 block">Nome *</label>
-                      <Input value={cursoForm.nome} onChange={(e) => setCursoForm({ ...cursoForm, nome: e.target.value })} placeholder="Ensino Médio" className="rounded-xl" />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-foreground mb-1.5 block">Descrição</label>
-                      <Input value={cursoForm.descricao} onChange={(e) => setCursoForm({ ...cursoForm, descricao: e.target.value })} className="rounded-xl" />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-foreground mb-1.5 block">Duração (semestres)</label>
-                      <Input type="number" value={cursoForm.duracao_semestres} onChange={(e) => setCursoForm({ ...cursoForm, duracao_semestres: e.target.value })} className="rounded-xl" />
-                    </div>
-                    <Button onClick={handleCreateCurso} disabled={saving} className="w-full rounded-xl h-11">{saving ? "Salvando..." : "Criar Curso"}</Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
-              <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                <DialogTrigger asChild>
-                  <Button className="gap-2 rounded-xl shadow-sm"><Plus className="h-4 w-4" /> Nova Turma</Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-md rounded-xl">
-                  <DialogHeader><DialogTitle className="text-lg">Nova Turma</DialogTitle></DialogHeader>
-                  <div className="space-y-4 mt-2">
-                    <div>
-                      <label className="text-sm font-medium text-foreground mb-1.5 block">Nome *</label>
-                      <Input value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} placeholder="1º Ano A" className="rounded-xl" />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-foreground mb-1.5 block">Código</label>
-                      <Input value={form.codigo} onChange={(e) => setForm({ ...form, codigo: e.target.value })} placeholder="1A-2024" className="rounded-xl" />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-foreground mb-1.5 block">Curso</label>
-                      <select className={selectClass} value={form.curso_id} onChange={(e) => setForm({ ...form, curso_id: e.target.value })}>
-                        <option value="">Selecione...</option>
-                        {cursos.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
-                      </select>
-                    </div>
-                    <div className="grid grid-cols-2 gap-3">
+              {canCreateCurso && (
+                <Dialog open={cursoDialogOpen} onOpenChange={setCursoDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" className="gap-2 rounded-xl">
+                      <Plus className="h-4 w-4" /> Novo Curso
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-md rounded-xl">
+                    <DialogHeader><DialogTitle className="text-lg">Novo Curso</DialogTitle></DialogHeader>
+                    <div className="space-y-4 mt-2">
                       <div>
-                        <label className="text-sm font-medium text-foreground mb-1.5 block">Turno</label>
-                        <select className={selectClass} value={form.turno} onChange={(e) => setForm({ ...form, turno: e.target.value })}>
-                          <option value="matutino">Matutino</option>
-                          <option value="vespertino">Vespertino</option>
-                          <option value="noturno">Noturno</option>
-                          <option value="integral">Integral</option>
+                        <label className="text-sm font-medium text-foreground mb-1.5 block">Nome *</label>
+                        <Input value={cursoForm.nome} onChange={(e) => setCursoForm({ ...cursoForm, nome: e.target.value })} placeholder="Ensino Médio" className="rounded-xl" />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-foreground mb-1.5 block">Descrição</label>
+                        <Input value={cursoForm.descricao} onChange={(e) => setCursoForm({ ...cursoForm, descricao: e.target.value })} className="rounded-xl" />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-foreground mb-1.5 block">Duração (semestres)</label>
+                        <Input type="number" value={cursoForm.duracao_semestres} onChange={(e) => setCursoForm({ ...cursoForm, duracao_semestres: e.target.value })} className="rounded-xl" />
+                      </div>
+                      <Button onClick={handleCreateCurso} disabled={saving} className="w-full rounded-xl h-11">{saving ? "Salvando..." : "Criar Curso"}</Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              )}
+              {canCreateTurma && (
+                <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button className="gap-2 rounded-xl shadow-sm"><Plus className="h-4 w-4" /> Nova Turma</Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-md rounded-xl">
+                    <DialogHeader><DialogTitle className="text-lg">Nova Turma</DialogTitle></DialogHeader>
+                    <div className="space-y-4 mt-2">
+                      <div>
+                        <label className="text-sm font-medium text-foreground mb-1.5 block">Nome *</label>
+                        <Input value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} placeholder="1º Ano A" className="rounded-xl" />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-foreground mb-1.5 block">Código</label>
+                        <Input value={form.codigo} onChange={(e) => setForm({ ...form, codigo: e.target.value })} placeholder="1A-2024" className="rounded-xl" />
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-foreground mb-1.5 block">Curso</label>
+                        <select className={selectClass} value={form.curso_id} onChange={(e) => setForm({ ...form, curso_id: e.target.value })}>
+                          <option value="">Selecione...</option>
+                          {cursos.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
                         </select>
                       </div>
-                      <div>
-                        <label className="text-sm font-medium text-foreground mb-1.5 block">Máx. Alunos</label>
-                        <Input type="number" value={form.max_alunos} onChange={(e) => setForm({ ...form, max_alunos: e.target.value })} className="rounded-xl" />
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-sm font-medium text-foreground mb-1.5 block">Turno</label>
+                          <select className={selectClass} value={form.turno} onChange={(e) => setForm({ ...form, turno: e.target.value })}>
+                            <option value="matutino">Matutino</option>
+                            <option value="vespertino">Vespertino</option>
+                            <option value="noturno">Noturno</option>
+                            <option value="integral">Integral</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium text-foreground mb-1.5 block">Máx. Alunos</label>
+                          <Input type="number" value={form.max_alunos} onChange={(e) => setForm({ ...form, max_alunos: e.target.value })} className="rounded-xl" />
+                        </div>
                       </div>
+                      <Button onClick={handleCreateTurma} disabled={saving} className="w-full rounded-xl h-11">{saving ? "Salvando..." : "Criar Turma"}</Button>
                     </div>
-                    <Button onClick={handleCreateTurma} disabled={saving} className="w-full rounded-xl h-11">{saving ? "Salvando..." : "Criar Turma"}</Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
+                  </DialogContent>
+                </Dialog>
+              )}
             </div>
           ) : undefined
         }
@@ -330,7 +356,7 @@ const Turmas = () => {
           title="Nenhuma turma cadastrada"
           description="Comece criando uma nova turma no sistema"
           action={
-            canManage ? (
+            canCreateTurma ? (
               <Button onClick={() => setDialogOpen(true)} className="gap-2 rounded-xl">
                 <Plus className="h-4 w-4" /> Criar Turma
               </Button>
@@ -353,7 +379,7 @@ const Turmas = () => {
                     <p className="text-xs text-muted-foreground mt-1">{turma.cursos?.nome || "Sem curso"} · {turma.ano}</p>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    {canDelete && (
+                    {(canEditTurma || canDeleteTurma) && (
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <button className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors opacity-0 group-hover:opacity-100">
@@ -361,18 +387,22 @@ const Turmas = () => {
                           </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="rounded-xl">
-                          <DropdownMenuItem
-                            onClick={(e) => { e.stopPropagation(); openEditTurma(turma); }}
-                            className="gap-2"
-                          >
-                            <Pencil className="h-3.5 w-3.5" /> Editar Turma
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={(e) => { e.stopPropagation(); openDeleteDialog("turma", turma); }}
-                            className="text-destructive focus:text-destructive gap-2"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" /> Excluir Turma
-                          </DropdownMenuItem>
+                          {canEditTurma && (
+                            <DropdownMenuItem
+                              onClick={(e) => { e.stopPropagation(); openEditTurma(turma); }}
+                              className="gap-2"
+                            >
+                              <Pencil className="h-3.5 w-3.5" /> Editar Turma
+                            </DropdownMenuItem>
+                          )}
+                          {canDeleteTurma && (
+                            <DropdownMenuItem
+                              onClick={(e) => { e.stopPropagation(); openDeleteDialog("turma", turma); }}
+                              className="text-destructive focus:text-destructive gap-2"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" /> Excluir Turma
+                            </DropdownMenuItem>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     )}
@@ -412,16 +442,18 @@ const Turmas = () => {
                   </div>
                   {canManage && (
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 w-8 p-0 rounded-lg hover:bg-primary/10"
-                        onClick={() => openEditCurso(curso)}
-                        title="Editar curso"
-                      >
-                        <Pencil className="h-4 w-4 text-muted-foreground" />
-                      </Button>
-                      {canDelete && (
+                      {canEditCurso && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 w-8 p-0 rounded-lg hover:bg-primary/10"
+                          onClick={() => openEditCurso(curso)}
+                          title="Editar curso"
+                        >
+                          <Pencil className="h-4 w-4 text-muted-foreground" />
+                        </Button>
+                      )}
+                      {canDeleteCurso && (
                         <Button
                           variant="ghost"
                           size="sm"

@@ -34,10 +34,13 @@ const Disciplinas = () => {
   const [cursos, setCursos] = useState<any[]>([]);
   const [professores, setProfessores] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const { hasRole, roles, institutionId } = useAuth();
+  const { roles, institutionId } = useAuth();
 
-  const canManage = hasRole("admin") || hasRole("secretaria");
-  const canDelete = hasPermission(roles as AppRole[], "disciplinas.delete");
+  const appRoles = roles as AppRole[];
+  const canCreate = hasPermission(appRoles, "disciplinas.create");
+  const canEdit = hasPermission(appRoles, "disciplinas.edit");
+  const canDelete = hasPermission(appRoles, "disciplinas.delete");
+  const canManage = canCreate || canEdit || canDelete;
 
   // Create dialog
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -87,6 +90,14 @@ const Disciplinas = () => {
 
   // ========== CREATE ==========
   const handleCreate = async () => {
+    if (!canCreate) {
+      toast({ title: "Sem permissão", description: "Seu perfil não pode criar disciplinas.", variant: "destructive" });
+      return;
+    }
+    if (!institutionId) {
+      toast({ title: "Instituição não vinculada", description: "Seu usuário não possui instituição definida. Contate o suporte/admin.", variant: "destructive" });
+      return;
+    }
     const errors: Record<string, string> = {};
     if (!form.nome.trim()) errors.nome = "Nome é obrigatório";
     setFormErrors(errors);
@@ -225,7 +236,7 @@ const Disciplinas = () => {
         description="Gerenciamento de disciplinas e componentes curriculares"
         breadcrumbs={[{ label: "Disciplinas" }]}
         actions={
-          canManage ? (
+          canCreate ? (
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
               <DialogTrigger asChild>
                 <Button className="gap-2 rounded-xl shadow-sm">
@@ -352,7 +363,7 @@ const Disciplinas = () => {
             variant={search ? "search" : "default"}
             title={search ? "Nenhum resultado" : "Nenhuma disciplina cadastrada"}
             description={search ? `Nenhuma disciplina encontrada para "${search}"` : "Comece criando uma nova disciplina no sistema"}
-            action={canManage && !search ? (<Button onClick={() => setDialogOpen(true)} className="gap-2 rounded-xl"><Plus className="h-4 w-4" /> Nova Disciplina</Button>) : undefined}
+            action={canCreate && !search ? (<Button onClick={() => setDialogOpen(true)} className="gap-2 rounded-xl"><Plus className="h-4 w-4" /> Nova Disciplina</Button>) : undefined}
           />
         </div>
       ) : (
@@ -401,12 +412,14 @@ const Disciplinas = () => {
                           {disc.ativo ? "Ativa" : "Inativa"}
                         </span>
                       </td>
-                      {canManage && (
+                      {(canEdit || canDelete) && (
                         <td className="px-6 py-4 text-right">
                           <div className="flex items-center justify-end gap-1">
-                            <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-lg hover:bg-primary/10" onClick={() => openEditDialog(disc)} title="Editar">
-                              <Pencil className="h-4 w-4 text-muted-foreground" />
-                            </Button>
+                            {canEdit && (
+                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-lg hover:bg-primary/10" onClick={() => openEditDialog(disc)} title="Editar">
+                                <Pencil className="h-4 w-4 text-muted-foreground" />
+                              </Button>
+                            )}
                             {canDelete && disc.ativo && (
                               <Button variant="ghost" size="sm" className="h-8 w-8 p-0 rounded-lg hover:bg-destructive/10" onClick={() => { setDeletingDisc(disc); setDeleteDialogOpen(true); }} title="Desativar">
                                 <Trash2 className="h-4 w-4 text-muted-foreground" />

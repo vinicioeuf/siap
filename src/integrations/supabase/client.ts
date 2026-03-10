@@ -59,6 +59,11 @@ class FirestoreQueryBuilder implements PromiseLike<any> {
   constructor(private table: string) {}
 
   select(columns = "*", options?: { head?: boolean; count?: string }) {
+    if (this.operation === "insert") {
+      this.selectColumns = columns;
+      return this;
+    }
+
     this.operation = "select";
     this.selectColumns = columns;
     this.head = Boolean(options?.head);
@@ -202,6 +207,14 @@ class FirestoreQueryBuilder implements PromiseLike<any> {
 
         const refDoc = await addDoc(this.getCollection(), payload);
         inserted.push({ id: refDoc.id, ...payload });
+      }
+
+      if (this.singleRow) {
+        const row = inserted[0] || null;
+        if (!row) {
+          return { data: null, error: { message: "Registro não encontrado" } };
+        }
+        return { data: row, error: null };
       }
 
       return { data: inserted, error: null };
@@ -348,6 +361,7 @@ async function invokeCreateUser(body: InvokeBody) {
       id: `${userId}_${role}`,
       user_id: userId,
       role,
+      institution_id: body.institution_id || null,
       created_at: nowIso(),
     }, { merge: true });
 
