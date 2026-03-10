@@ -33,6 +33,7 @@ const Disciplinas = () => {
   const [disciplinas, setDisciplinas] = useState<any[]>([]);
   const [cursos, setCursos] = useState<any[]>([]);
   const [professores, setProfessores] = useState<any[]>([]);
+  const [turmasPorDisciplina, setTurmasPorDisciplina] = useState<Record<string, string[]>>({});
   const [loading, setLoading] = useState(true);
   const { roles, institutionId } = useAuth();
 
@@ -61,10 +62,14 @@ const Disciplinas = () => {
 
   const fetchData = async () => {
     setLoading(true);
-    const [discRes, cursosRes, profsRes] = await Promise.all([
-      supabase.from("disciplinas").select("*, cursos(nome)").order("nome"),
-      supabase.from("cursos").select("*").eq("ativo", true).order("nome"),
+    if (!institutionId) { setLoading(false); return; }
+
+    const [discRes, cursosRes, profsRes, turmasRes, linksRes] = await Promise.all([
+      supabase.from("disciplinas").select("*, cursos(nome)").eq("institution_id", institutionId).order("nome"),
+      supabase.from("cursos").select("*").eq("institution_id", institutionId).order("nome"),
       supabase.from("profiles").select("user_id, full_name").order("full_name"),
+      supabase.from("turmas").select("id, nome, ativo").eq("institution_id", institutionId).order("nome"),
+      supabase.from("turma_disciplinas").select("disciplina_id, turma_id").eq("institution_id", institutionId),
     ]);
 
     // Filter professors: only users with professor role
@@ -81,12 +86,26 @@ const Disciplinas = () => {
     }
 
     setDisciplinas(discRes.data || []);
-    setCursos(cursosRes.data || []);
+    setCursos((cursosRes.data || []).filter((curso: any) => curso.ativo !== false));
     setProfessores(profsList);
+
+    const turmasAtivas = (turmasRes.data || []).filter((turma: any) => turma.ativo !== false);
+    const turmaNomePorId = new Map<string, string>(turmasAtivas.map((turma: any) => [turma.id, turma.nome]));
+    const links = linksRes.data || [];
+    const mapa: Record<string, string[]> = {};
+
+    links.forEach((link: any) => {
+      const nomeTurma = turmaNomePorId.get(link.turma_id);
+      if (!nomeTurma) return;
+      if (!mapa[link.disciplina_id]) mapa[link.disciplina_id] = [];
+      mapa[link.disciplina_id].push(nomeTurma);
+    });
+
+    setTurmasPorDisciplina(mapa);
     setLoading(false);
   };
 
-  useEffect(() => { fetchData(); }, []);
+  useEffect(() => { fetchData(); }, [institutionId]);
 
   // ========== CREATE ==========
   const handleCreate = async () => {
@@ -214,10 +233,12 @@ const Disciplinas = () => {
 
   const filtered = disciplinas.filter((d) => {
     const q = search.toLowerCase();
+    const turmasVinculadas = (turmasPorDisciplina[d.id] || []).join(" ").toLowerCase();
     return (
       d.nome?.toLowerCase().includes(q) ||
       d.codigo?.toLowerCase().includes(q) ||
-      d.cursos?.nome?.toLowerCase().includes(q)
+      d.cursos?.nome?.toLowerCase().includes(q) ||
+      turmasVinculadas.includes(q)
     );
   });
 
@@ -375,6 +396,7 @@ const Disciplinas = () => {
                   <th className="text-left text-xs font-semibold text-muted-foreground px-6 py-4 uppercase tracking-wider">Disciplina</th>
                   <th className="text-left text-xs font-semibold text-muted-foreground px-6 py-4 hidden md:table-cell uppercase tracking-wider">Código</th>
                   <th className="text-left text-xs font-semibold text-muted-foreground px-6 py-4 hidden lg:table-cell uppercase tracking-wider">Curso</th>
+                  <th className="text-left text-xs font-semibold text-muted-foreground px-6 py-4 hidden xl:table-cell uppercase tracking-wider">Turmas</th>
                   <th className="text-left text-xs font-semibold text-muted-foreground px-6 py-4 hidden lg:table-cell uppercase tracking-wider">Professor</th>
                   <th className="text-left text-xs font-semibold text-muted-foreground px-6 py-4 hidden md:table-cell uppercase tracking-wider">CH</th>
                   <th className="text-left text-xs font-semibold text-muted-foreground px-6 py-4 uppercase tracking-wider">Status</th>
@@ -399,6 +421,13 @@ const Disciplinas = () => {
                       </td>
                       <td className="px-6 py-4 hidden lg:table-cell">
                         <span className="text-sm text-muted-foreground">{disc.cursos?.nome || "Geral"}</span>
+                      </td>
+                      <td className="px-6 py-4 hidden xl:table-cell">
+                        {(turmasPorDisciplina[disc.id] || []).length === 0 ? (
+                          <span className="text-sm text-muted-foreground">Nenhuma</span>
+                        ) : (
+                          <span className="text-sm text-muted-foreground">{(turmasPorDisciplina[disc.id] || []).slice(0, 2).join(", ")}{(turmasPorDisciplina[disc.id] || []).length > 2 ? ` +${(turmasPorDisciplina[disc.id] || []).length - 2}` : ""}</span>
+                        )}
                       </td>
                       <td className="px-6 py-4 hidden lg:table-cell">
                         <span className="text-sm text-muted-foreground">{profName || "—"}</span>

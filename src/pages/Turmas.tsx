@@ -10,10 +10,15 @@ import { Plus, Users, Clock, Sun, Moon, Sunset, Trash2, MoreVertical, Archive, A
 import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { createAuditLog } from "@/lib/audit";
 import { hasPermission, type AppRole } from "@/lib/permissions";
+import { AulasTab } from "@/components/AulasTab";
+import { TurmaDisciplinasTab } from "@/components/TurmaDisciplinasTab";
 
 const turnoIcon: Record<string, typeof Sun> = { matutino: Sun, vespertino: Sunset, noturno: Moon };
 const turnoLabel: Record<string, string> = { matutino: "Matutino", vespertino: "Vespertino", noturno: "Noturno", integral: "Integral" };
@@ -54,19 +59,32 @@ const Turmas = () => {
   const [deleteInfo, setDeleteInfo] = useState<any>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [selectedTurma, setSelectedTurma] = useState<any>(null);
+  const [turmaAlunos, setTurmaAlunos] = useState<any[]>([]);
+  const [alunosLoading, setAlunosLoading] = useState(false);
+  const [detailOpen, setDetailOpen] = useState(false);
 
   const fetchData = async () => {
     setLoading(true);
     const [turmasRes, cursosRes] = await Promise.all([
-      supabase.from("turmas").select("*, cursos(nome)").eq("ativo", true).order("nome"),
-      supabase.from("cursos").select("*").eq("ativo", true).order("nome"),
+      supabase.from("turmas").select("*, cursos(nome)").order("nome"),
+      supabase.from("cursos").select("*").order("nome"),
     ]);
-    setTurmas(turmasRes.data || []);
-    setCursos(cursosRes.data || []);
+    setTurmas((turmasRes.data || []).filter((item: any) => item.ativo !== false));
+    setCursos((cursosRes.data || []).filter((item: any) => item.ativo !== false));
     setLoading(false);
   };
 
   useEffect(() => { fetchData(); }, []);
+
+  const openTurmaDetail = async (turma: any) => {
+    setSelectedTurma(turma);
+    setDetailOpen(true);
+    setAlunosLoading(true);
+    const { data } = await supabase.rpc("get_alunos_by_turma", { _turma_id: turma.id });
+    setTurmaAlunos(data || []);
+    setAlunosLoading(false);
+  };
 
   const handleCreateTurma = async () => {
     if (!canCreateTurma) {
@@ -85,6 +103,7 @@ const Turmas = () => {
       curso_id: form.curso_id || null,
       turno: form.turno,
       max_alunos: parseInt(form.max_alunos) || 40,
+      ativo: true,
       institution_id: institutionId,
     });
     if (error) {
@@ -113,6 +132,7 @@ const Turmas = () => {
       nome: cursoForm.nome,
       descricao: cursoForm.descricao || null,
       duracao_semestres: parseInt(cursoForm.duracao_semestres) || 1,
+      ativo: true,
       institution_id: institutionId,
     }).select().single();
     if (error) {
@@ -370,6 +390,7 @@ const Turmas = () => {
             return (
               <div
                 key={turma.id}
+                onClick={() => openTurmaDetail(turma)}
                 className="bg-card rounded-xl border border-border/50 shadow-sm p-6 hover:shadow-lg hover:-translate-y-1 transition-all duration-300 cursor-pointer group animate-fade-in"
                 style={{ animationDelay: `${index * 50}ms` }}
               >
@@ -382,7 +403,7 @@ const Turmas = () => {
                     {(canEditTurma || canDeleteTurma) && (
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <button className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors opacity-0 group-hover:opacity-100">
+                          <button onClick={(e) => e.stopPropagation()} className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors opacity-0 group-hover:opacity-100">
                             <MoreVertical className="h-4 w-4" />
                           </button>
                         </DropdownMenuTrigger>
@@ -471,6 +492,58 @@ const Turmas = () => {
           </div>
         </div>
       )}
+
+      <Sheet open={detailOpen} onOpenChange={setDetailOpen}>
+        <SheetContent className="min-w-[480px] sm:min-w-[600px] overflow-y-auto">
+          <SheetHeader className="mb-4">
+            <SheetTitle>{selectedTurma?.nome}</SheetTitle>
+            <p className="text-sm text-muted-foreground">
+              {selectedTurma?.cursos?.nome || "Sem curso"} · {turnoLabel[selectedTurma?.turno] || selectedTurma?.turno} · {selectedTurma?.ano}
+            </p>
+          </SheetHeader>
+
+          <Tabs defaultValue="alunos">
+            <TabsList className="w-full mb-4">
+              <TabsTrigger value="alunos" className="flex-1">Alunos</TabsTrigger>
+              <TabsTrigger value="disciplinas" className="flex-1">Disciplinas</TabsTrigger>
+              <TabsTrigger value="aulas" className="flex-1">Aulas</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="alunos">
+              {alunosLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : turmaAlunos.length === 0 ? (
+                <div className="text-center py-12 text-muted-foreground text-sm">
+                  Nenhum aluno matriculado nesta turma.
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground mb-3">{turmaAlunos.length} aluno(s) matriculado(s)</p>
+                  {turmaAlunos.map((aluno) => (
+                    <div key={aluno.aluno_id} className="flex items-center justify-between px-4 py-3 rounded-xl border border-border/50 bg-card hover:bg-muted/20 transition-colors">
+                      <div>
+                        <p className="text-sm font-medium">{aluno.aluno_nome}</p>
+                        <p className="text-xs text-muted-foreground">Matrícula: {aluno.matricula || "—"}</p>
+                      </div>
+                      <Badge variant="outline" className="text-xs">Ativo</Badge>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="aulas">
+              <AulasTab turmaId={selectedTurma?.id} institutionId={institutionId} />
+            </TabsContent>
+
+            <TabsContent value="disciplinas">
+              <TurmaDisciplinasTab turmaId={selectedTurma?.id} institutionId={institutionId} />
+            </TabsContent>
+          </Tabs>
+        </SheetContent>
+      </Sheet>
 
       {/* Edit Turma Dialog */}
       <Dialog open={editTurmaDialogOpen} onOpenChange={(open) => { setEditTurmaDialogOpen(open); if (!open) setEditingTurma(null); }}>

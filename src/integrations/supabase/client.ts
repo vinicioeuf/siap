@@ -284,6 +284,20 @@ class FirestoreQueryBuilder implements PromiseLike<any> {
       }));
     }
 
+    if (this.table === "aulas" && this.selectColumns.includes("disciplinas(")) {
+      const disciplinaIds = Array.from(new Set(rows.map((r) => r.disciplina_id).filter(Boolean)));
+      if (!disciplinaIds.length) return rows;
+
+      const disciplinasSnap = await getDocs(query(collection(db, "disciplinas"), where("id", "in", disciplinaIds.slice(0, 10))));
+      const disciplinaMap = new Map<string, any>();
+      disciplinasSnap.docs.forEach((d) => disciplinaMap.set(d.data().id || d.id, { id: d.id, ...d.data() }));
+
+      return rows.map((row) => ({
+        ...row,
+        disciplinas: row.disciplina_id ? disciplinaMap.get(row.disciplina_id) || null : null,
+      }));
+    }
+
     return rows;
   }
 }
@@ -483,6 +497,39 @@ export const supabase = {
           const disciplinas = await new FirestoreQueryBuilder("disciplinas").select("id").eq("curso_id", cursoId);
           const canDelete = (turmas.data?.length || 0) === 0 && (disciplinas.data?.length || 0) === 0;
           resolve({ data: canDelete, error: null });
+        },
+      } as PromiseLike<any>;
+    }
+
+    if (name === "get_alunos_by_turma") {
+      const turmaId = params._turma_id;
+      return {
+        then: async (resolve: any) => {
+          const matriculas = await new FirestoreQueryBuilder("matriculas").select("aluno_id").eq("turma_id", turmaId);
+          const alunoIds = Array.from(new Set((matriculas.data || []).map((m: any) => m.aluno_id).filter(Boolean)));
+
+          if (!alunoIds.length) {
+            resolve({ data: [], error: null });
+            return;
+          }
+
+          const alunos = await new FirestoreQueryBuilder("alunos").select("id,user_id,matricula").in("id", alunoIds.slice(0, 10));
+          const userIds = Array.from(new Set((alunos.data || []).map((a: any) => a.user_id).filter(Boolean)));
+
+          const profiles = userIds.length
+            ? await new FirestoreQueryBuilder("profiles").select("user_id,full_name").in("user_id", userIds.slice(0, 10))
+            : { data: [] as any[] };
+
+          const profileMap = new Map<string, any>();
+          (profiles.data || []).forEach((p: any) => profileMap.set(p.user_id, p));
+
+          const result = (alunos.data || []).map((aluno: any) => ({
+            aluno_id: aluno.id,
+            aluno_nome: profileMap.get(aluno.user_id)?.full_name || "Aluno",
+            matricula: aluno.matricula || null,
+          }));
+
+          resolve({ data: result, error: null });
         },
       } as PromiseLike<any>;
     }
